@@ -425,7 +425,7 @@ footer,
 .skill-edit-header,
 .skill-edit {
   display: grid;
-  grid-template-columns: minmax(9rem, 1fr) minmax(11rem, 1.2fr) 4.5rem 5.5rem 4rem auto;
+  grid-template-columns: minmax(9rem, 1fr) minmax(11rem, 1.2fr) 4.5rem 5.5rem 4rem 6.5rem;
   gap: 0.65rem;
   align-items: center;
 }
@@ -449,8 +449,10 @@ footer,
 .skill-edit-header span:nth-child(3),
 .skill-edit-header span:nth-child(4),
 .skill-edit-header span:nth-child(5),
+.skill-edit-header span:nth-child(6),
 .skill-edit .edit-stat,
-.skill-edit .edit-check {
+.skill-edit .edit-check,
+.skill-edit .skill-actions-col {
   text-align: center;
   justify-self: center;
 }
@@ -646,7 +648,15 @@ footer,
   align-items: center;
   gap: 0.35rem;
   white-space: nowrap;
-  justify-self: end;
+  justify-self: center;
+}
+.sheet-skill-header span:nth-child(2),
+.sheet-skill-header span:nth-child(3),
+.sheet-skill-header span:nth-child(4),
+.sheet-skill .skill-cost,
+.sheet-skill .skill-stat {
+  justify-self: center;
+  text-align: center;
 }
 .sheet-skill-header,
 .sheet-item-header {
@@ -714,8 +724,8 @@ footer,
   width: 3.2rem;
 }
 .sheet-skill-header .header-check {
-  text-align: right;
-  justify-self: end;
+  text-align: center;
+  justify-self: center;
 }
 @media print {
   .sheet-head {
@@ -774,8 +784,14 @@ footer,
     margin-bottom: 1mm;
   }
   .sheet-skill-header .header-check {
-    text-align: right;
-    justify-self: end;
+    text-align: center !important;
+    justify-self: center !important;
+  }
+  .sheet-skill .skill-cost,
+  .sheet-skill .skill-stat,
+  .sheet-skill .skill-check {
+    text-align: center !important;
+    justify-self: center !important;
   }
   .sheet-skill {
     grid-template-columns: minmax(44mm, 1fr) 18mm 22mm 32mm 14mm !important;
@@ -831,8 +847,8 @@ footer,
   .blank .print-resource {
     display: inline-block !important;
     white-space: nowrap !important;
-    text-align: left !important;
-    justify-self: start !important;
+    text-align: center !important;
+    justify-self: center !important;
   }
   .print-slots,
   .blank .print-slots {
@@ -869,8 +885,8 @@ footer,
   }
   .sheet-item-header span:nth-child(3),
   .sheet-item .item-qty {
-    text-align: left !important;
-    justify-self: start !important;
+    text-align: center !important;
+    justify-self: center !important;
   }
   .sheet-item-header span:nth-child(4),
   .sheet-item .slot-display {
