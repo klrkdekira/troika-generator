@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { loadGameData } from './data/load'
-import { d66, encumbrance, makeCharacter, normalize, rollExpression } from './rules/character'
+import {
+  d66,
+  encumbrance,
+  makeCharacter,
+  normalize,
+  randomSpell,
+  rollExpression,
+  weaponNames,
+} from './rules/character'
 import { download, exportable, notice, validate } from './export/character'
 import type { AdvancedSkill, Character, GameData, Item } from './types'
 
@@ -34,7 +42,11 @@ export default function App() {
       const checked = validate(raw, data.schema)
       if (checked.valid) {
         update(raw)
-        setErrors([])
+        setErrors(
+          data.backgrounds.some(background => background.name === raw.background)
+            ? []
+            : [`Unknown background “${raw.background}”; background details are unavailable.`]
+        )
       } else setErrors(checked.errors)
     } catch {
       setErrors(['The selected file is not valid JSON.'])
@@ -51,7 +63,13 @@ export default function App() {
     )
   const burden = pc && encumbrance(pc, data.manifest.rules.encumbrance)
   return (
-    <main>
+    <main
+      onDragOver={event => event.preventDefault()}
+      onDrop={event => {
+        event.preventDefault()
+        void importFile(event.dataTransfer.files[0])
+      }}
+    >
       <header>
         <div>
           <p className="eyebrow">LIVE SRD CHARACTER TOOL</p>
@@ -61,7 +79,7 @@ export default function App() {
         <div className="actions no-print">
           <button onClick={() => generate()}>Random background</button>
           <button onClick={() => generate(d66())}>Roll d66</button>
-          <button onClick={() => file.current?.click()}>Import JSON</button>
+          <button onClick={() => file.current?.click()}>Import JSON / drop file</button>
           <input
             ref={file}
             hidden
@@ -90,7 +108,7 @@ export default function App() {
               New {pc.background}
             </button>
             <AttributeEditor pc={pc} data={data} update={update} />
-            <SkillEditor pc={pc} update={update} />
+            <SkillEditor pc={pc} data={data} update={update} />
             <label>
               Notes
               <textarea
@@ -211,7 +229,16 @@ function AttributeEditor({
   )
 }
 
-function SkillEditor({ pc, update }: { pc: Character; update: (p: Character) => void }) {
+function SkillEditor({
+  pc,
+  data,
+  update,
+}: {
+  pc: Character
+  data: GameData
+  update: (p: Character) => void
+}) {
+  const weapons = weaponNames(data)
   const change = (i: number, v: Partial<AdvancedSkill>) =>
     update({
       ...pc,
@@ -222,21 +249,49 @@ function SkillEditor({ pc, update }: { pc: Character; update: (p: Character) => 
       <h2>Skills & advancement</h2>
       <div className="skill-edit-header">
         <span>Skill / Spell</span>
+        <span>Options</span>
         <span>Rank</span>
         <span>Skill Total</span>
-        <span>Used</span>
+        <span className="header-check">Used</span>
         <span>Actions</span>
       </div>
       {pc.advancedSkills.map((x, i) => (
         <div className="skill-edit" key={`${x.name}-${i}`}>
-          <span>
-            {x.name} <small>{x.type}</small>
+          <span className="skill-name-col">
+            <strong>{x.name}</strong> <small className="skill-type-tag">{x.type}</small>
+          </span>
+          <span className="skill-options-col">
+            {x.type === 'weapon' ? (
+              <select
+                className="weapon-select"
+                aria-label={`Change weapon for ${x.name}`}
+                value={weapons.find(name => x.name === `${name} Fighting`) ?? ''}
+                onChange={event => change(i, { name: `${event.target.value} Fighting` })}
+              >
+                <option value="">Choose weapon…</option>
+                {weapons.map(name => (
+                  <option key={name} value={name}>
+                    {name} Fighting
+                  </option>
+                ))}
+              </select>
+            ) : x.type === 'spell' ? (
+              <button
+                className="spell-reroll-btn"
+                onClick={() => change(i, { name: randomSpell(data) ?? x.name })}
+              >
+                Re-roll spell
+              </button>
+            ) : (
+              <span className="no-option">—</span>
+            )}
           </span>
           <span className="edit-stat">
             <input
               type="number"
               min="1"
               value={x.rank}
+              aria-label={`Rank for ${x.name}`}
               onChange={e => change(i, { rank: Number(e.target.value) })}
             />
           </span>
@@ -247,10 +302,13 @@ function SkillEditor({ pc, update }: { pc: Character; update: (p: Character) => 
             <input
               type="checkbox"
               checked={Boolean(x.ticks)}
+              aria-label={`Skill used check for ${x.name}`}
               onChange={e => change(i, { ticks: e.target.checked ? 1 : 0 })}
             />
           </label>
-          <button onClick={() => change(i, { rank: x.rank + 1, ticks: 0 })}>Rank +1</button>
+          <span className="skill-actions-col">
+            <button onClick={() => change(i, { rank: x.rank + 1, ticks: 0 })}>Rank +1</button>
+          </span>
         </div>
       ))}
     </>
@@ -303,8 +361,9 @@ function Sheet({
       ...pc,
       advancedSkills: pc.advancedSkills.map((x, j) => (j === i ? { ...x, ...v } : x)),
     })
-  const free = Math.max(0, 12 - burden.slots)
-  const over = Math.max(0, 18 - Math.max(12, burden.slots))
+  const { maxSlots, severelyOverburdenedThreshold } = data.manifest.rules.encumbrance
+  const free = Math.max(0, maxSlots - burden.slots)
+  const over = Math.max(0, severelyOverburdenedThreshold - Math.max(maxSlots, burden.slots))
   return (
     <section className="sheet">
       <div className="sheet-head">
@@ -334,10 +393,10 @@ function Sheet({
         </p>
       </div>
       {background?.description && (
-        <>
+        <div className="background-description">
           <h3>Background</h3>
           <p>{background.description}</p>
-        </>
+        </div>
       )}
       <h3>Advanced skills</h3>
       <div className="sheet-skill-header">
@@ -379,7 +438,7 @@ function Sheet({
       ))}
       <WeaponDamage pc={pc} data={data} />
       <h3>
-        Inventory ({burden.slots} used · {free} free of 12 · {burden.state})
+        Inventory ({burden.slots} used · {free} free of {maxSlots} · {burden.state})
       </h3>
       <div className="sheet-item-header">
         <span>Item</span>
@@ -414,8 +473,9 @@ function Sheet({
                 onChange={e => baseline(i, { maximumQuantity: Number(e.target.value) })}
               />
             </label>
-            <span className="print-resource">
-              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
+            <span className="print-resource print-quantity">
+              <span className="print-resource-box">{x.quantity ?? ''}</span> /{' '}
+              {x.maximumQuantity ?? x.quantity ?? 0}
             </span>
           </span>
           <span className="slot-display">
@@ -495,6 +555,13 @@ function InventorySheet({
 }) {
   const change = (i: number, v: Partial<Item>) =>
     update({ ...pc, inventory: pc.inventory.map((x, j) => (j === i ? { ...x, ...v } : x)) })
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= pc.inventory.length) return
+    const inventory = [...pc.inventory]
+    const [moved] = inventory.splice(from, 1)
+    inventory.splice(to, 0, moved)
+    update({ ...pc, inventory })
+  }
   const blank = (key: string, over = false) => (
     <div className={over ? 'sheet-item blank over' : 'sheet-item blank'} key={key}>
       <span className="blank-name"></span>
@@ -544,23 +611,58 @@ function InventorySheet({
                 onChange={e => change(i, { maximumQuantity: Number(e.target.value) })}
               />
             </label>
-            <span className="print-resource">
-              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
+            <span className="print-resource print-quantity">
+              <span className="print-resource-box">{x.quantity ?? ''}</span> /{' '}
+              {x.maximumQuantity ?? x.quantity ?? 0}
             </span>
           </span>
           <span className="slot-display">
+            <input
+              className="no-print"
+              type="number"
+              min="1"
+              value={x.slots}
+              aria-label={`Slots used by ${x.name}`}
+              onChange={e => change(i, { slots: Number(e.target.value) })}
+            />
             <span className="slot-value">{x.slots}</span>
           </span>
-          <button
-            className="no-print remove"
-            onClick={() => update({ ...pc, inventory: pc.inventory.filter((_, j) => j !== i) })}
-          >
-            Remove
-          </button>
+          <span className="no-print inventory-actions">
+            <button
+              disabled={i === 0}
+              aria-label={`Move ${x.name} up`}
+              onClick={() => move(i, i - 1)}
+            >
+              ↑
+            </button>
+            <button
+              disabled={i === pc.inventory.length - 1}
+              aria-label={`Move ${x.name} down`}
+              onClick={() => move(i, i + 1)}
+            >
+              ↓
+            </button>
+            <label>
+              <input
+                type="checkbox"
+                checked={Boolean(x.used)}
+                onChange={e => change(i, { used: e.target.checked })}
+              />{' '}
+              Used
+            </label>
+            <button
+              className="remove"
+              onClick={() => update({ ...pc, inventory: pc.inventory.filter((_, j) => j !== i) })}
+            >
+              Remove
+            </button>
+          </span>
         </div>
       ))}
       {Array.from({ length: normalFree }, (_, i) => blank(`free-${i}`))}
-      {overburdenedFree > 0 && <div className="over-divider">Slots 13–18 carry a −4 penalty</div>}
+      {overburdenedFree > 0 && (
+        <div className="over-divider">Additional slots carry a −4 penalty</div>
+      )}
       {Array.from({ length: overburdenedFree }, (_, i) => blank(`over-${i}`, true))}
       {pc.inventory.length < 18 && (
         <button

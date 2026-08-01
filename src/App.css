@@ -256,6 +256,10 @@ footer,
   main {
     padding: 0;
   }
+  .background-description,
+  .item-description {
+    display: none !important;
+  }
   .sheet {
     box-shadow: none;
     border: 0;
@@ -371,7 +375,7 @@ footer,
 .skill-edit-header,
 .skill-edit {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) 5.5rem 6.5rem 4.5rem 7.5rem;
+  grid-template-columns: minmax(9rem, 1fr) minmax(11rem, 1.2fr) 4.5rem 5.5rem 4rem auto;
   gap: 0.65rem;
   align-items: center;
 }
@@ -392,10 +396,71 @@ footer,
   border-top: 0;
   padding: 0.65rem;
 }
+.skill-edit-header span:nth-child(3),
 .skill-edit-header span:nth-child(4),
+.skill-edit-header span:nth-child(5),
+.skill-edit .edit-stat,
 .skill-edit .edit-check {
   text-align: center;
   justify-self: center;
+}
+.skill-name-col {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.skill-type-tag {
+  color: #655d53;
+  font-weight: normal;
+  font-size: 0.8rem;
+  background: #f0ebe4;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  text-transform: lowercase;
+}
+.skill-options-col {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.weapon-select {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #c4b9ad;
+  border-radius: 4px;
+  background-color: #fcfcfb;
+  color: #302a25;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.weapon-select:hover {
+  border-color: #8c7f73;
+}
+.weapon-select:focus {
+  border-color: #302a25;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(48, 42, 37, 0.15);
+}
+.spell-reroll-btn {
+  font-size: 0.82rem;
+  padding: 0.3rem 0.6rem;
+}
+.no-option {
+  color: #a09588;
+  font-size: 0.85rem;
+  padding-left: 0.25rem;
+}
+.skill-actions-col {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .skill-edit input[type='number'] {
   width: 3.8rem;
@@ -731,6 +796,20 @@ footer,
   display: inline-block;
   width: 1.8rem;
   text-align: center;
+}
+.inventory-actions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.inventory-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.slot-display input {
+  width: 3.5rem;
 }
 .sheet-item .item-label {
   min-width: 0;

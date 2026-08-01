@@ -4,6 +4,19 @@ export const roll = (sides: number) => Math.floor(Math.random() * sides) + 1
 
 export const d66 = () => roll(6) * 10 + roll(6)
 
+export const randomSpell = (data: GameData) => {
+  const table = data.tables.get('Random Spell Table')
+  const result = table?.entries?.find((entry: any) => Number(entry.roll) === d66())?.result
+  if (typeof result === 'string') return result
+  const spells = [...data.spells.keys()]
+  return spells.length ? spells[Math.floor(Math.random() * spells.length)] : undefined
+}
+
+export const weaponNames = (data: GameData) =>
+  [...data.tables.values()]
+    .flatMap(table => table.damageMatrix?.weapons ?? [])
+    .filter((name, index, names) => names.indexOf(name) === index)
+
 export const rollExpression = (expression: string) => {
   const match = expression.match(/^(\d*)d(\d+)([+-]\d+)?$/i)
   if (!match) return 0
@@ -71,8 +84,15 @@ export function makeCharacter(background: Background, data: GameData): Character
     }
   }
   const advancedSkills = [
-    ...(background.advancedSkills ?? []).map(x => convert(x)),
-    ...(background.spells ?? []).map(x => convert(x, true)),
+    ...(background.advancedSkills ?? []).map(x => {
+      if (x.name !== 'Fighting in chosen weapon') return convert(x)
+      const weapons = weaponNames(data)
+      const name = weapons.length ? weapons[Math.floor(Math.random() * weapons.length)] : undefined
+      return convert(name ? { ...x, name: name + ' Fighting' } : x)
+    }),
+    ...(background.spells ?? []).map(x =>
+      convert(x.name === 'Random' ? { ...x, name: randomSpell(data) ?? x.name } : x, true)
+    ),
   ]
   const zoanthrop = background.id === 66
   return {
@@ -90,7 +110,9 @@ export function makeCharacter(background: Background, data: GameData): Character
       })(),
     },
     advancedSkills,
-    inventory: (background.possessions ?? []).slice(0, 18).map(item),
+    inventory: (background.possessions ?? [])
+      .slice(0, 18)
+      .map((entry, position) => item(entry, position + 1)),
     baselinePossessions:
       background.overrideBaselinePossessions || zoanthrop
         ? []

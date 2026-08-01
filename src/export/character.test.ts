@@ -25,5 +25,7 @@ describe('Character export', () => {
     )
     expect(exported._generator.notice).toBe(notice)
     expect(exported._generator.attribution).toBe(mockAttribution)
+    const { _generator, ...imported } = JSON.parse(JSON.stringify(exported))
+    expect(exportable(imported as any, mockAttribution)).toEqual(exported)
   })
 })

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { d66, encumbrance, rollExpression, skillType } from './character'
+import { d66, encumbrance, makeCharacter, normalize, rollExpression, skillType } from './character'
+import { loadGameData } from '../data/load'
+import { validate } from '../export/character'
 
 describe('Troika rules helpers', () => {
   it('rolls within each dice expression range', () => {
@@ -27,5 +29,42 @@ describe('Troika rules helpers', () => {
       { maxSlots: 12, severelyOverburdenedThreshold: 18 }
     )
     expect(result.state).toContain('overburdened')
+  })
+  it('generates every live background as a schema-valid character', async () => {
+    const data = await loadGameData()
+    expect(data.backgrounds).toHaveLength(36)
+    for (const background of data.backgrounds) {
+      const character = makeCharacter(background, data)
+      expect(character.advancedSkills.some(x => x.name === 'Random')).toBe(false)
+      expect(character.advancedSkills.some(x => x.name === 'Fighting in chosen weapon')).toBe(false)
+      const checked = validate(character, data.schema)
+      expect(checked.valid, background.name + ': ' + checked.errors.join('; ')).toBe(true)
+    }
+    for (const name of ['sample-ardent-giant', 'sample-burglar']) {
+      const response = await fetch(
+        `https://cheeleong.dev/troika-system-json/objects/characters/${name}.json`
+      )
+      expect(response.ok, name).toBe(true)
+      const sample = await response.json()
+      const checked = validate(sample, data.schema)
+      expect(checked.valid, name + ': ' + checked.errors.join('; ')).toBe(true)
+      expect(() => normalize(sample)).not.toThrow()
+    }
+  }, 30000)
+  it('recomputes totals and clamps resource values during normalization', () => {
+    const character = {
+      attributes: {
+        skill: 6,
+        stamina: { current: 99, maximum: 99 },
+        luck: { current: -1, maximum: 1 },
+      },
+      advancedSkills: [{ name: 'Sneak', rank: 3, total: 0, type: 'skill' }],
+      inventory: [],
+      baselinePossessions: [],
+    } as any
+    const result = normalize(character)
+    expect(result.attributes.stamina).toMatchObject({ maximum: 24, current: 24 })
+    expect(result.attributes.luck).toMatchObject({ maximum: 7, current: 0 })
+    expect(result.advancedSkills[0].total).toBe(9)
   })
 })
