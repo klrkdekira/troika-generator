@@ -727,6 +727,11 @@ function Footer({ attribution }: { attribution: string }) {
         </a>
         . <i>Troika!</i> is a trademark of the Melsonian Arts Council.
       </p>
+      <p>
+        <a href="https://github.com/klrkdekira/troika-generator" target="_blank" rel="noreferrer">
+          View source on GitHub
+        </a>
+      </p>
     </footer>
   )
 }
