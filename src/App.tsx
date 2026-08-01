@@ -378,16 +378,19 @@ function Sheet({
   return (
     <section className="sheet">
       <div className="sheet-head">
-        <div>
-          <p>CHARACTER SHEET</p>
-          <h2>{pc.name || 'Unnamed adventurer'}</h2>
-          <span>{pc.background}</span>
+        <div className="head-identity">
+          <p>TROIKA! CHARACTER SHEET</p>
+          <h2 className="character-name">
+            {pc.name || <span className="web-current">Unnamed adventurer</span>}
+          </h2>
+          <span className="head-background">{pc.background}</span>
         </div>
-        <p className="header-stat">
-          SKILL <b>{pc.attributes.skill}</b>
+        <p className="header-stat head-skill">
+          <span>SKILL</span>
+          <b>{pc.attributes.skill}</b>
         </p>
         <p className="header-stat">
-          STAMINA{' '}
+          <span>STAMINA</span>
           <b>
             <span className="web-current">{pc.attributes.stamina.current}</span>
             <span className="print-current-box" aria-label="Current stamina"></span> /{' '}
@@ -395,7 +398,7 @@ function Sheet({
           </b>
         </p>
         <p className="header-stat">
-          LUCK{' '}
+          <span>LUCK</span>
           <b>
             <span className="web-current">{pc.attributes.luck.current}</span>
             <span className="print-current-box" aria-label="Current luck"></span> /{' '}
@@ -549,15 +552,21 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     .filter(x => x.type === 'weapon')
     .map(x => rowFor(x.name))
     .filter(Boolean) as Array<{ weapon: string; values: Record<string, string> }>
-  if (!rows.length) return null
+  const spellRows = pc.advancedSkills
+    .filter(x => x.type === 'spell')
+    .map(x => ({ weapon: x.name, values: data.spells.get(x.name)?.damageTable }))
+    .filter(x => x.values) as Array<{ weapon: string; values: Record<string, string> }>
+  if (!rows.length && !spellRows.length) return null
 
-  const rolls = Array.from(new Set(rows.flatMap(r => Object.keys(r.values))))
+  const rolls = Array.from(new Set([...rows, ...spellRows].flatMap(r => Object.keys(r.values))))
+  const cell = (row: { values: Record<string, string> }) =>
+    rolls.map(roll => <span key={roll}>{row.values[roll] ?? '—'}</span>)
   return (
     <>
-      <h3>Weapon damage</h3>
+      <h3>{spellRows.length ? 'Weapon & spell damage' : 'Weapon damage'}</h3>
       <div className="damage-matrix">
         <div className="damage-header">
-          <span>Weapon</span>
+          <span>{spellRows.length && !rows.length ? 'Spell' : 'Weapon'}</span>
           {rolls.map(roll => (
             <span key={roll}>{roll}</span>
           ))}
@@ -565,9 +574,15 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
         {rows.map(row => (
           <div className="damage-row" key={row.weapon}>
             <b>{row.weapon}</b>
-            {rolls.map(roll => (
-              <span key={roll}>{row.values[roll] ?? '—'}</span>
-            ))}
+            {cell(row)}
+          </div>
+        ))}
+        {spellRows.map(row => (
+          <div className="damage-row spell-damage" key={row.weapon}>
+            <b>
+              {row.weapon} <small>spell</small>
+            </b>
+            {cell(row)}
           </div>
         ))}
       </div>

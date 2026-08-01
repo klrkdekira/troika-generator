@@ -90,7 +90,7 @@ h3 {
   border-bottom: 3px solid #111;
 }
 .sheet-head h2 {
-  margin: 0.2rem 0;
+  margin: 0;
 }
 .sheet-head p {
   font-size: 0.8rem;
@@ -204,13 +204,14 @@ footer,
     padding: 1rem;
   }
   header,
-  .sheet-head {
+  .sheet .sheet-head {
     display: block;
   }
   .actions {
     margin-top: 1rem;
   }
-  .sheet-head > p {
+  .sheet .sheet-head > p,
+  .sheet .sheet-head > .header-stat {
     display: inline-block;
     margin-right: 1rem;
   }
@@ -308,6 +309,10 @@ footer,
   text-align: center;
   font-weight: bold;
 }
+.damage-row b small {
+  font-weight: normal;
+  color: #655d53;
+}
 @media (max-width: 760px) {
   .damage-header,
   .damage-row {
@@ -324,14 +329,41 @@ footer,
   font-size: 1.05rem;
   letter-spacing: 0.02em;
 }
+/* The identity block and each stat share a top edge and the same label line
+   height, so the name lands level with the SKILL/STAMINA/LUCK values without
+   subgrid (which Chrome drops when printing). */
 .sheet-head {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr repeat(3, auto);
+  align-items: start;
+  column-gap: 1rem;
   padding-bottom: 0.85rem;
 }
-.sheet-head > p {
+.head-identity,
+.sheet-head > .header-stat,
+.head-identity > *,
+.sheet-head > .header-stat > * {
+  margin: 0;
+}
+.head-identity > p,
+.sheet-head > .header-stat > span {
+  display: block;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.head-background {
+  display: block;
+}
+.sheet-head > .header-stat {
   min-width: 4.7rem;
-  margin: 0.1rem 0;
   text-align: right;
+}
+.sheet-head > .header-stat > span {
+  text-align: center;
+}
+/* Skill is a bare number rather than a fill-in box, so it centres instead. */
+.sheet-head > .head-skill {
+  text-align: center;
 }
 .sheet-skill,
 .sheet-item {
@@ -548,10 +580,24 @@ footer,
   .print-current-box {
     display: inline-block !important;
     width: 13mm;
-    height: 6mm;
+    height: 8mm;
     border: 1.2px solid #111;
     vertical-align: middle;
     margin-right: 1.5mm;
+  }
+  /* The name is a fill-in box on paper; an unnamed character prints it empty. */
+  /* Same 8mm box height as the stamina/luck current boxes. */
+  .character-name {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    min-width: 70mm;
+    height: 8mm;
+    border: 1.2px solid #111;
+    padding: 0 2mm;
+    margin: 0 !important;
+    font-size: 12pt;
+    line-height: 1.1;
   }
 }
 .sheet-item > * {
@@ -659,17 +705,29 @@ footer,
   .sheet-head {
     display: grid !important;
     grid-template-columns: 1fr repeat(3, 26mm);
-    gap: 3mm;
+    column-gap: 3mm;
     align-items: start !important;
   }
   .sheet-head > p.header-stat {
-    display: block !important;
     min-width: 0 !important;
     margin: 0 !important;
-    text-align: left !important;
+    text-align: right !important;
   }
+  /* Match the name box: an 8mm band, so every value in the header lines up. */
   .sheet-head .header-stat b {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 8mm;
+    line-height: 1;
     white-space: nowrap;
+  }
+  /* Skill is a bare number, so label and value both centre in their column. */
+  .sheet-head > p.head-skill {
+    text-align: center !important;
+  }
+  .sheet-head .head-skill b {
+    justify-content: center;
   }
   .sheet-skill-header {
     display: grid !important;
@@ -863,9 +921,11 @@ footer,
   height: 1.6rem;
 }
 @media print {
+  /* Ruled-paper style: adjacent lines instead of gapped boxes, so the notes
+     block does not eat a third of the page. */
   .notes-lines {
-    gap: 5mm;
-    margin-top: 2mm;
+    gap: 0;
+    margin-top: 1mm;
   }
   .notes-line {
     border-bottom: 1px solid #767066;
