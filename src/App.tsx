@@ -35,6 +35,15 @@ export default function App() {
       data?.backgrounds[Math.floor(Math.random() * (data?.backgrounds.length ?? 1))]
     if (data && bg) setPc(makeCharacter(bg, data))
   }
+  // Back to the background list. The character only lives in memory, so warn
+  // before dropping it.
+  const home = () => {
+    const unsaved = 'Leave this character? It is lost unless you have downloaded the JSON.'
+    if (!window.confirm(unsaved)) return
+    setPc(undefined)
+    setErrors([])
+    setStatus('')
+  }
   const importFile = async (f?: File) => {
     if (!f || !data) return
     try {
@@ -78,6 +87,11 @@ export default function App() {
           <p>Generate a table-ready character from live system data.</p>
         </div>
         <div className="actions no-print">
+          {pc && (
+            <button className="secondary" onClick={home}>
+              ← Backgrounds
+            </button>
+          )}
           <button onClick={() => generate()}>Random background</button>
           <button onClick={() => generate(d66())}>Roll d66</button>
           <button onClick={() => file.current?.click()}>Import JSON / drop file</button>
@@ -318,24 +332,36 @@ function SkillEditor({
 
 function Picker({ data, choose }: { data: GameData; choose: (id: number) => void }) {
   const [q, setQ] = useState('')
+  const matches = data.backgrounds.filter(x => x.name.toLowerCase().includes(q.toLowerCase()))
   return (
     <section className="picker">
-      <h2>Choose a background</h2>
-      <label>
-        Filter <input value={q} onChange={e => setQ(e.target.value)} />
-      </label>
-      <div className="backgrounds">
-        {data.backgrounds
-          .filter(x => x.name.toLowerCase().includes(q.toLowerCase()))
-          .map(x => (
-            <button key={x.id} onClick={() => choose(x.id)}>
-              <b>
-                {x.id} · {x.name}
-              </b>
-              <span>{x.description || 'Generate this character.'}</span>
+      <div className="picker-head">
+        <h2>Choose a background</h2>
+        <label className="picker-filter">
+          Filter
+          <input value={q} placeholder="Name…" onChange={e => setQ(e.target.value)} />
+        </label>
+        <p className="picker-count">
+          {matches.length === data.backgrounds.length
+            ? `${matches.length} backgrounds`
+            : `${matches.length} of ${data.backgrounds.length}`}
+        </p>
+      </div>
+      {matches.length === 0 ? (
+        <p className="picker-empty">No background matches “{q}”.</p>
+      ) : (
+        <div className="backgrounds">
+          {matches.map(x => (
+            <button className="background-card" key={x.id} onClick={() => choose(x.id)}>
+              <span className="background-roll">{x.id}</span>
+              <b className="background-name">{x.name}</b>
+              <span className="background-blurb">
+                {x.description || 'Generate this character.'}
+              </span>
             </button>
           ))}
-      </div>
+        </div>
+      )}
     </section>
   )
 }
