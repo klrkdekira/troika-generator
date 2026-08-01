@@ -30,6 +30,18 @@ describe('Troika rules helpers', () => {
     )
     expect(result.state).toContain('overburdened')
   })
+  it('parses and rolls item quantity expressions in background possessions', async () => {
+    const data = await loadGameData()
+    const exographer = data.backgrounds.find(b => b.id === 24)
+    expect(exographer).toBeDefined()
+    if (!exographer) return
+    const character = makeCharacter(exographer, data)
+    const cores = character.inventory.find(i => i.name === 'Plasmic Cores')
+    expect(cores).toBeDefined()
+    expect(cores?.quantity).toBeGreaterThanOrEqual(1)
+    expect(cores?.quantity).toBeLessThanOrEqual(6)
+    expect(cores?.maximumQuantity).toBe(cores?.quantity)
+  })
   it('generates every live background as a schema-valid character', async () => {
     const data = await loadGameData()
     expect(data.backgrounds).toHaveLength(36)

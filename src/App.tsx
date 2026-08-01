@@ -474,8 +474,7 @@ function Sheet({
               />
             </label>
             <span className="print-resource print-quantity">
-              <span className="print-resource-box">{x.quantity ?? ''}</span> /{' '}
-              {x.maximumQuantity ?? x.quantity ?? 0}
+              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
             </span>
           </span>
           <span className="slot-display">
@@ -617,8 +616,7 @@ function InventorySheet({
               />
             </label>
             <span className="print-resource print-quantity">
-              <span className="print-resource-box">{x.quantity ?? ''}</span> /{' '}
-              {x.maximumQuantity ?? x.quantity ?? 0}
+              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
             </span>
           </span>
           <span className="slot-display">

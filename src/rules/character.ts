@@ -40,30 +40,49 @@ export const skillType = (name: string, isSpell = false, data?: GameData): Skill
     : 'skill'
 }
 
-const item = (source: any, position: number): Item => ({
-  name: source.name,
-  position,
-  slots: source.slots ?? 1,
-  quantity: source.quantity ?? 1,
-  maximumQuantity: source.quantity ?? 1,
-  description: source.description,
-  properties: source.properties,
-  readyForUse: false,
-  condition: 'good',
-})
+const parseQuantity = (value: unknown): number | undefined => {
+  if (typeof value === 'number') return value
+  if (typeof value !== 'string') return undefined
+  if (/^\d*d\d+([+-]\d+)?$/i.test(value)) return rollExpression(value)
+  if (/^\d+$/.test(value)) return Number(value)
+  return undefined
+}
+
+const item = (source: any, position: number): Item => {
+  let name = String(source.name || '')
+  let quantity = parseQuantity(source.quantity)
+
+  if (quantity === undefined) {
+    const diceMatch = name.match(/^(\d*d\d+([+-]\d+)?) (.+)$/i)
+    const countMatch = name.match(/^(\d+) (.+)$/)
+    if (diceMatch) {
+      quantity = rollExpression(diceMatch[1])
+      name = diceMatch[3]
+    } else if (countMatch) {
+      quantity = Number(countMatch[1])
+      name = countMatch[2]
+    } else {
+      quantity = 1
+    }
+  }
+
+  const maximumQuantity = Math.max(quantity, parseQuantity(source.maximumQuantity) ?? quantity)
+
+  return {
+    name,
+    position,
+    slots: source.slots ?? 1,
+    quantity,
+    maximumQuantity,
+    description: source.description,
+    properties: source.properties,
+    readyForUse: false,
+    condition: 'good',
+  }
+}
 
 const baseline = (names: string[]) =>
-  names.map((raw, position) => {
-    const dice = raw.match(/^(\d+d\d+) (.+)$/)
-    const count = raw.match(/^(\d+) (.+)$/)
-    return item(
-      {
-        name: dice?.[2] ?? count?.[2] ?? raw,
-        quantity: dice ? rollExpression(dice[1]) : count ? Number(count[1]) : 1,
-      },
-      position + 1
-    )
-  })
+  names.map((raw, position) => item({ name: raw }, position + 1))
 
 export function makeCharacter(background: Background, data: GameData): Character {
   const rules = data.manifest.rules.coreRules
