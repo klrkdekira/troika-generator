@@ -278,6 +278,14 @@ button:disabled {
 button.secondary {
   background: #6a5148;
 }
+.roll-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #4a4038;
+  white-space: nowrap;
+}
 .warning {
   border-left: 5px solid #b67000;
   background: #fff2cf;
@@ -472,6 +480,29 @@ footer,
 .sheet-head > .header-stat > span {
   text-align: center;
 }
+/* A pick the player still has to make: named quietly, leaving the row free. */
+.pick-hint {
+  font-style: italic;
+  color: #9a9084;
+}
+@media print {
+  .pick-hint {
+    color: #767066;
+  }
+}
+/* The dice the player still has to roll, captioned under their boxes. */
+.to-roll {
+  display: block;
+  font-weight: normal;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #655d53;
+}
+@media print {
+  .to-roll {
+    color: #444;
+  }
+}
 /* Skill is a bare number rather than a fill-in box, so it centres instead. */
 .sheet-head > .head-skill {
   text-align: center;
@@ -496,6 +527,12 @@ footer,
 .skill-cost {
   font-size: 0.85rem;
   overflow-wrap: anywhere;
+}
+/* A cost nobody knows yet is a box to fill, not a dash. */
+.skill-cost .empty-resource-box {
+  width: 1.6rem;
+  height: 1.3rem;
+  margin: 0;
 }
 .skill-cost:empty::before {
   content: '—';
@@ -844,7 +881,7 @@ footer,
 @media print {
   .sheet-head {
     display: grid !important;
-    grid-template-columns: 1fr repeat(3, 26mm);
+    grid-template-columns: 1fr repeat(3, 28mm);
     column-gap: 3mm;
     align-items: start !important;
   }
@@ -858,6 +895,10 @@ footer,
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    gap: 1.2mm;
+    /* The last column ends on the printable edge; without this the right-hand
+       box loses its border. */
+    padding-right: 0.6mm;
     height: 8mm;
     line-height: 1;
     white-space: nowrap;
@@ -868,6 +909,13 @@ footer,
   }
   .sheet-head .head-skill b {
     justify-content: center;
+  }
+  .sheet-head .header-stat .print-current-box {
+    margin-right: 0;
+  }
+  /* A current/maximum pair has to fit the same column as a single box. */
+  .sheet-head .header-stat .paired .print-current-box {
+    width: 10mm;
   }
   .sheet-skill-header {
     display: grid !important;

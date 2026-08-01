@@ -34,6 +34,8 @@ export interface Character {
   advancedSkills: AdvancedSkill[]
   inventory: Item[]
   baselinePossessions: Item[]
+  /** True while the player still has to roll their own attributes and dice items. */
+  unrolled?: boolean
   initiativeTokens: number
   specialAbilities?: string[]
   languages?: string[]

@@ -20,6 +20,7 @@ export default function App() {
   const [pc, setPc] = useState<Character>()
   const [status, setStatus] = useState('')
   const [errors, setErrors] = useState<string[]>([])
+  const [roll, setRoll] = useState(true)
   const file = useRef<HTMLInputElement>(null)
   const load = () => {
     setStatus('Loading live data…')
@@ -33,7 +34,22 @@ export default function App() {
     const bg =
       data?.backgrounds.find(x => x.id === id) ??
       data?.backgrounds[Math.floor(Math.random() * (data?.backgrounds.length ?? 1))]
-    if (data && bg) setPc(makeCharacter(bg, data))
+    if (data && bg) setPc(makeCharacter(bg, data, { roll }))
+  }
+  // Flipping the switch re-issues the open sheet in the new mode; name and
+  // notes survive, everything the generator produces is redone.
+  const rollMyOwn = (manual: boolean) => {
+    const background = data?.backgrounds.find(x => x.name === pc?.background)
+    if (pc && background) {
+      const redo = 'Redo this character? Rolled values and gear edits are replaced.'
+      if (!window.confirm(redo)) return
+      setPc({
+        ...makeCharacter(background, data!, { roll: !manual }),
+        name: pc.name,
+        notes: pc.notes,
+      })
+    }
+    setRoll(!manual)
   }
   // Back to the background list. The character only lives in memory, so warn
   // before dropping it.
@@ -87,12 +103,15 @@ export default function App() {
           <p>Generate a table-ready character from live system data.</p>
         </div>
         <div className="actions no-print">
+          <label className="roll-toggle">
+            <input type="checkbox" checked={!roll} onChange={e => rollMyOwn(e.target.checked)} />
+            Let me roll my own dice
+          </label>
           {pc && (
             <button className="secondary" onClick={home}>
               ← Backgrounds
             </button>
           )}
-          <button onClick={() => generate()}>Random background</button>
           <button onClick={() => generate(d66())}>Roll d66</button>
           <button onClick={() => file.current?.click()}>Import JSON / drop file</button>
           <input
@@ -171,6 +190,10 @@ function AttributeEditor({
   data: GameData
   update: (p: Character) => void
 }) {
+  const dice = data.manifest.rules.coreRules.attributeGeneration
+  // Typing a value means the dice have been rolled after all.
+  const set = (attributes: Character['attributes']) =>
+    update({ ...pc, unrolled: undefined, attributes })
   return (
     <>
       <h2>Attributes</h2>
@@ -179,12 +202,11 @@ function AttributeEditor({
           Skill <span className="limit">limit 4–6</span>
           <input
             type="number"
-            value={pc.attributes.skill}
+            value={pc.unrolled ? '' : pc.attributes.skill}
+            placeholder={dice.skill}
             min="4"
             max="6"
-            onChange={e =>
-              update({ ...pc, attributes: { ...pc.attributes, skill: Number(e.target.value) } })
-            }
+            onChange={e => set({ ...pc.attributes, skill: Number(e.target.value) })}
           />
         </label>
         {(['stamina', 'luck'] as const).map(k => (
@@ -193,32 +215,28 @@ function AttributeEditor({
             <span>
               <input
                 type="number"
-                value={pc.attributes[k].current}
+                value={pc.unrolled ? '' : pc.attributes[k].current}
+                placeholder={dice[k]}
                 min="0"
-                max={pc.attributes[k].maximum}
+                max={pc.unrolled ? undefined : pc.attributes[k].maximum}
                 onChange={e =>
-                  update({
-                    ...pc,
-                    attributes: {
-                      ...pc.attributes,
-                      [k]: { ...pc.attributes[k], current: Number(e.target.value) },
-                    },
+                  set({
+                    ...pc.attributes,
+                    [k]: { ...pc.attributes[k], current: Number(e.target.value) },
                   })
                 }
               />{' '}
               /{' '}
               <input
                 type="number"
-                value={pc.attributes[k].maximum}
+                value={pc.unrolled ? '' : pc.attributes[k].maximum}
+                placeholder={dice[k]}
                 min={k === 'stamina' ? 14 : 7}
                 max={k === 'stamina' ? 24 : 12}
                 onChange={e =>
-                  update({
-                    ...pc,
-                    attributes: {
-                      ...pc.attributes,
-                      [k]: { ...pc.attributes[k], maximum: Number(e.target.value) },
-                    },
+                  set({
+                    ...pc.attributes,
+                    [k]: { ...pc.attributes[k], maximum: Number(e.target.value) },
                   })
                 }
               />
@@ -226,13 +244,7 @@ function AttributeEditor({
             <button
               onClick={() => {
                 const n = rollExpression(data.manifest.rules.coreRules.attributeGeneration[k])
-                update({
-                  ...pc,
-                  attributes: {
-                    ...pc.attributes,
-                    [k]: { ...pc.attributes[k], current: n, maximum: n },
-                  },
-                })
+                set({ ...pc.attributes, [k]: { ...pc.attributes[k], current: n, maximum: n } })
               }}
             >
               Re-roll max
@@ -291,12 +303,27 @@ function SkillEditor({
                 ))}
               </select>
             ) : x.type === 'spell' ? (
-              <button
-                className="spell-reroll-btn"
-                onClick={() => change(i, { name: randomSpell(data) ?? x.name })}
-              >
-                Re-roll spell
-              </button>
+              <>
+                <select
+                  className="weapon-select"
+                  aria-label={`Change spell for ${x.name}`}
+                  value={data.spells.has(x.name) ? x.name : ''}
+                  onChange={event => change(i, { name: event.target.value })}
+                >
+                  <option value="">Choose spell…</option>
+                  {[...data.spells.keys()].map(name => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="spell-reroll-btn"
+                  onClick={() => change(i, { name: randomSpell(data) ?? x.name })}
+                >
+                  Roll
+                </button>
+              </>
             ) : (
               <span className="no-option">—</span>
             )}
@@ -378,6 +405,14 @@ function Sheet({
   update: (p: Character) => void
 }) {
   const background = data.backgrounds.find(x => x.name === pc.background)
+  const dice = data.manifest.rules.coreRules.attributeGeneration
+  // Picks the generator was told not to make: the sheet asks for them instead.
+  const unpicked = (x: AdvancedSkill) =>
+    x.name === 'Random'
+      ? 'random spell'
+      : x.name === 'Fighting in chosen weapon'
+        ? 'chosen weapon'
+        : ''
   const skill = (i: number, v: Partial<AdvancedSkill>) =>
     update({
       ...pc,
@@ -409,24 +444,43 @@ function Sheet({
         </div>
         <p className="header-stat head-skill">
           <span>SKILL</span>
-          <b>{pc.attributes.skill}</b>
-        </p>
-        <p className="header-stat">
-          <span>STAMINA</span>
           <b>
-            <span className="web-current">{pc.attributes.stamina.current}</span>
-            <span className="print-current-box" aria-label="Current stamina"></span> /{' '}
-            {pc.attributes.stamina.maximum}
+            {pc.unrolled ? (
+              <>
+                <span className="web-current">—</span>
+                <span className="print-resource">
+                  <span className="print-current-box" aria-label="Skill"></span>
+                </span>
+              </>
+            ) : (
+              pc.attributes.skill
+            )}
           </b>
+          {pc.unrolled && <small className="to-roll">{dice.skill}</small>}
         </p>
-        <p className="header-stat">
-          <span>LUCK</span>
-          <b>
-            <span className="web-current">{pc.attributes.luck.current}</span>
-            <span className="print-current-box" aria-label="Current luck"></span> /{' '}
-            {pc.attributes.luck.maximum}
-          </b>
-        </p>
+        {(['stamina', 'luck'] as const).map(key => (
+          <p className="header-stat" key={key}>
+            <span>{key === 'stamina' ? 'STAMINA' : 'LUCK'}</span>
+            <b>
+              {pc.unrolled ? (
+                <>
+                  <span className="web-current">—</span>
+                  <span className="print-resource paired">
+                    <span className="print-current-box" aria-label={`Current ${key}`}></span> /{' '}
+                    <span className="print-current-box" aria-label={`Maximum ${key}`}></span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="web-current">{pc.attributes[key].current}</span>
+                  <span className="print-current-box" aria-label={`Current ${key}`}></span> /{' '}
+                  {pc.attributes[key].maximum}
+                </>
+              )}
+            </b>
+            {pc.unrolled && <small className="to-roll">{dice[key]}</small>}
+          </p>
+        ))}
       </div>
       {background?.description && (
         <div className="background-description">
@@ -445,10 +499,24 @@ function Sheet({
       {pc.advancedSkills.map((x, i) => (
         <div className="sheet-skill" key={i}>
           <span>
-            {x.name} <small>{x.type}</small>
+            {unpicked(x) !== '' ? (
+              <span className="pick-hint">{unpicked(x)}</span>
+            ) : (
+              <>
+                {x.name} <small>{x.type}</small>
+              </>
+            )}
           </span>
           <span className="skill-cost">
-            {x.type === 'spell' ? (data.spells.get(x.name)?.cost ?? '') : ''}
+            {x.type === 'spell' &&
+              (data.spells.get(x.name)?.cost ?? (
+                <>
+                  <span className="no-print empty-resource-box"></span>
+                  <span className="print-resource">
+                    <span className="print-resource-box"></span>
+                  </span>
+                </>
+              ))}
           </span>
           <span className="skill-stat">
             <span className="web-current">{x.rank}</span>
@@ -457,9 +525,10 @@ function Sheet({
             </span>
           </span>
           <span className="skill-stat">
-            <span className="web-current">{x.total}</span>
+            <span className="web-current">{pc.unrolled ? '—' : x.total}</span>
             <span className="print-resource">
-              <span className="print-resource-box"></span> / {x.total}
+              <span className="print-resource-box"></span>
+              {pc.unrolled ? '' : ` / ${x.total}`}
             </span>
           </span>
           <label className="skill-check">
@@ -620,6 +689,31 @@ function InventorySheet({
       </span>
     </span>
   )
+  // A possession with no quantity is one the player still has to roll for, so
+  // both fields stay empty rather than defaulting to zero.
+  const quantityCell = (possession: Item, set: (v: Partial<Item>) => void) => {
+    const maximum = possession.maximumQuantity ?? possession.quantity
+    const number = (value: number | undefined, key: 'quantity' | 'maximumQuantity') => (
+      <input
+        type="number"
+        min="0"
+        value={value ?? ''}
+        aria-label={`${key === 'quantity' ? 'Quantity' : 'Maximum quantity'} of ${possession.name}`}
+        onChange={e => set({ [key]: e.target.value === '' ? undefined : Number(e.target.value) })}
+      />
+    )
+    return (
+      <span className="item-qty">
+        <label className="no-print">
+          {number(possession.quantity, 'quantity')} / {number(maximum, 'maximumQuantity')}
+        </label>
+        <span className="print-resource print-quantity">
+          <span className="print-resource-box"></span> /{' '}
+          {maximum ?? <span className="print-resource-box"></span>}
+        </span>
+      </span>
+    )
+  }
   const change = (i: number, v: Partial<Item>) =>
     update({ ...pc, inventory: pc.inventory.map((x, j) => (j === i ? { ...x, ...v } : x)) })
   const baseline = (i: number, v: Partial<Item>) =>
@@ -666,26 +760,7 @@ function InventorySheet({
         >
           <span className="item-label">{x.name}</span>
           {protection(x, v => baseline(i, v))}
-          <span className="item-qty">
-            <label className="no-print">
-              <input
-                type="number"
-                min="0"
-                value={x.quantity ?? 0}
-                onChange={e => baseline(i, { quantity: Number(e.target.value) })}
-              />{' '}
-              /{' '}
-              <input
-                type="number"
-                min="0"
-                value={x.maximumQuantity ?? x.quantity ?? 0}
-                onChange={e => baseline(i, { maximumQuantity: Number(e.target.value) })}
-              />
-            </label>
-            <span className="print-resource print-quantity">
-              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
-            </span>
-          </span>
+          {quantityCell(x, v => baseline(i, v))}
           <span className="slot-display">
             <span className="slot-value">{x.slots}</span>
           </span>
@@ -707,26 +782,7 @@ function InventorySheet({
             />
           </span>
           {protection(x, v => change(i, v))}
-          <span className="item-qty">
-            <label className="no-print">
-              <input
-                type="number"
-                min="0"
-                value={x.quantity ?? 0}
-                onChange={e => change(i, { quantity: Number(e.target.value) })}
-              />{' '}
-              /{' '}
-              <input
-                type="number"
-                min="0"
-                value={x.maximumQuantity ?? x.quantity ?? 0}
-                onChange={e => change(i, { maximumQuantity: Number(e.target.value) })}
-              />
-            </label>
-            <span className="print-resource print-quantity">
-              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
-            </span>
-          </span>
+          {quantityCell(x, v => change(i, v))}
           <span className="slot-display">
             <input
               className="no-print"

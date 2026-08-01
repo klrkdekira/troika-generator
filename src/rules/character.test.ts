@@ -77,6 +77,45 @@ describe('Troika rules helpers', () => {
     expect(cores?.quantity).toBeLessThanOrEqual(6)
     expect(cores?.maximumQuantity).toBe(cores?.quantity)
   })
+  it('leaves every die to the player when asked, and still validates', async () => {
+    const data = await loadGameData()
+    const apprentice = data.backgrounds.find(b => (b.spells ?? []).some(x => x.name === 'Random'))
+    expect(apprentice).toBeDefined()
+    if (!apprentice) return
+    const blank = makeCharacter(apprentice, data, { roll: false })
+
+    // A dice quantity declared beside the name (Cacogen's cores) has to read
+    // like one written into it (the baseline "2d6 Silver Pence").
+    const cacogen = data.backgrounds.find(b => b.name === 'Cacogen')!
+    const cores = makeCharacter(cacogen, data, { roll: false }).inventory.find(x =>
+      x.name.endsWith('Plasmic Cores')
+    )
+    expect(cores?.name).toBe('2d6 Plasmic Cores')
+    expect(cores?.quantity).toBeUndefined()
+    expect(
+      makeCharacter(cacogen, data).inventory.find(x => x.name === 'Plasmic Cores')?.quantity
+    ).toBeGreaterThanOrEqual(2)
+
+    expect(blank.unrolled).toBe(true)
+    expect(blank.attributes.skill).toBe(4)
+    expect(blank.attributes.stamina.maximum).toBe(14)
+    expect(blank.attributes.luck.maximum).toBe(7)
+    // The background's own random choices stay open.
+    expect(blank.advancedSkills.some(x => x.name === 'Random')).toBe(true)
+    // Only dice are left to the player: the count goes blank and the expression
+    // stays visible in the name, however the source spelled it.
+    const pence = blank.baselinePossessions.find(x => x.name === '2d6 Silver Pence')
+    expect(pence).toBeDefined()
+    expect(pence?.quantity).toBeUndefined()
+    expect(pence?.maximumQuantity).toBeUndefined()
+    // Fixed counts are not dice, so they survive.
+    expect(blank.baselinePossessions.find(x => x.name === 'Provisions')?.quantity).toBe(6)
+    expect(blank.inventory.every(x => x.name !== '')).toBe(true)
+    // Normalisation must not fill the blanks back in.
+    const normalised = normalize(blank)
+    expect(normalised.baselinePossessions[0].quantity).toBeUndefined()
+    expect(validate(normalised, data.schema).errors).toEqual([])
+  }, 30000)
   it('generates every live background as a schema-valid character', async () => {
     const data = await loadGameData()
     expect(data.backgrounds).toHaveLength(36)

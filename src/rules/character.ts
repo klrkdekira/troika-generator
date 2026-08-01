@@ -33,6 +33,7 @@ export const skillType = (name: string, isSpell = false, data?: GameData): Skill
   const declared = data?.skills.get(name)?.type
   if (declared && ['skill', 'spell', 'language', 'secret', 'weapon'].includes(declared))
     return declared
+  if (name === 'Fighting in chosen weapon') return 'weapon'
   if (name.startsWith('Language – ')) return 'language'
   if (name.startsWith('Secret Signs – ')) return 'secret'
   return name.endsWith(' Fighting') || name === 'Jousting' || name === 'Wrestling'
@@ -48,16 +49,35 @@ const parseQuantity = (value: unknown): number | undefined => {
   return undefined
 }
 
-const item = (source: any, position: number): Item => {
-  let name = String(source.name || '')
-  let quantity = parseQuantity(source.quantity)
+const dice = /^\d*d\d+([+-]\d+)?$/i
 
+const item = (source: any, position: number, roll = true): Item => {
+  let name = String(source.name || '')
+  const declared = typeof source.quantity === 'string' ? source.quantity.trim() : source.quantity
+  const declaredDice = typeof declared === 'string' && dice.test(declared)
+  const diceInName = name.match(/^(\d*d\d+([+-]\d+)?) (.+)$/i)
+  const common = {
+    position,
+    slots: source.slots ?? 1,
+    description: source.description,
+    properties: source.properties,
+    readyForUse: false,
+    condition: 'good' as const,
+  }
+
+  // Nothing to roll here, or the player asked to roll it: either way only a die
+  // is left blank. "2d6" against Plasmic Cores reads as "2d6 Plasmic Cores",
+  // the same shape the SRD uses for "2d6 Silver Pence".
+  if (!roll && (declaredDice || diceInName)) {
+    return { ...common, name: declaredDice ? `${declared} ${name}` : name }
+  }
+
+  let quantity = parseQuantity(declared)
   if (quantity === undefined) {
-    const diceMatch = name.match(/^(\d*d\d+([+-]\d+)?) (.+)$/i)
     const countMatch = name.match(/^(\d+) (.+)$/)
-    if (diceMatch) {
-      quantity = rollExpression(diceMatch[1])
-      name = diceMatch[3]
+    if (diceInName) {
+      quantity = rollExpression(diceInName[1])
+      name = diceInName[3]
     } else if (countMatch) {
       quantity = Number(countMatch[1])
       name = countMatch[2]
@@ -65,28 +85,26 @@ const item = (source: any, position: number): Item => {
       quantity = 1
     }
   }
-
   const maximumQuantity = Math.max(quantity, parseQuantity(source.maximumQuantity) ?? quantity)
 
-  return {
-    name,
-    position,
-    slots: source.slots ?? 1,
-    quantity,
-    maximumQuantity,
-    description: source.description,
-    properties: source.properties,
-    readyForUse: false,
-    condition: 'good',
-  }
+  return { ...common, name, quantity, maximumQuantity }
 }
 
-const baseline = (names: string[]) =>
-  names.map((raw, position) => item({ name: raw }, position + 1))
+const baseline = (names: string[], roll = true) =>
+  names.map((raw, position) => item({ name: raw }, position + 1, roll))
 
-export function makeCharacter(background: Background, data: GameData): Character {
+/**
+ * `roll: false` leaves every die for the player: attributes sit at their lowest
+ * legal value behind an `unrolled` flag, dice quantities and the background's
+ * random spell and weapon choice stay as written.
+ */
+export function makeCharacter(
+  background: Background,
+  data: GameData,
+  { roll = true }: { roll?: boolean } = {}
+): Character {
   const rules = data.manifest.rules.coreRules
-  const skill = rollExpression(rules.attributeGeneration.skill)
+  const skill = roll ? rollExpression(rules.attributeGeneration.skill) : 4
   const convert = (entry: { name: string; rank: number }, spell = false): AdvancedSkill => {
     const type = skillType(entry.name, spell, data)
     const specialization =
@@ -104,13 +122,13 @@ export function makeCharacter(background: Background, data: GameData): Character
   }
   const advancedSkills = [
     ...(background.advancedSkills ?? []).map(x => {
-      if (x.name !== 'Fighting in chosen weapon') return convert(x)
+      if (x.name !== 'Fighting in chosen weapon' || !roll) return convert(x)
       const weapons = weaponNames(data)
       const name = weapons.length ? weapons[Math.floor(Math.random() * weapons.length)] : undefined
       return convert(name ? { ...x, name: name + ' Fighting' } : x)
     }),
     ...(background.spells ?? []).map(x =>
-      convert(x.name === 'Random' ? { ...x, name: randomSpell(data) ?? x.name } : x, true)
+      convert(x.name === 'Random' && roll ? { ...x, name: randomSpell(data) ?? x.name } : x, true)
     ),
   ]
   const zoanthrop = background.id === 66
@@ -120,22 +138,23 @@ export function makeCharacter(background: Background, data: GameData): Character
     attributes: {
       skill,
       stamina: (() => {
-        const maximum = rollExpression(rules.attributeGeneration.stamina)
+        const maximum = roll ? rollExpression(rules.attributeGeneration.stamina) : 14
         return { maximum, current: maximum, temporary: 0 }
       })(),
       luck: (() => {
-        const maximum = rollExpression(rules.attributeGeneration.luck)
+        const maximum = roll ? rollExpression(rules.attributeGeneration.luck) : 7
         return { maximum, current: maximum, timesTestedThisSession: 0 }
       })(),
     },
     advancedSkills,
+    ...(roll ? {} : { unrolled: true }),
     inventory: (background.possessions ?? [])
       .slice(0, 18)
-      .map((entry, position) => item(entry, position + 1)),
+      .map((entry, position) => item(entry, position + 1, roll)),
     baselinePossessions:
       background.overrideBaselinePossessions || zoanthrop
         ? []
-        : baseline(rules.baselinePossessions),
+        : baseline(rules.baselinePossessions, roll),
     initiativeTokens: data.manifest.rules.initiative.playerTokens,
     specialAbilities: background.special ?? [],
     languages: advancedSkills.filter(x => x.type === 'language').map(x => x.specialization!),
@@ -143,6 +162,19 @@ export function makeCharacter(background: Background, data: GameData): Character
     notes: '',
   }
 }
+
+// A possession with no quantity at all is left alone: that is the player's box
+// to fill in on a sheet they wanted to roll themselves.
+const quantities = (x: Item) =>
+  x.quantity === undefined && x.maximumQuantity === undefined
+    ? {}
+    : {
+        maximumQuantity: Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
+        quantity: Math.min(
+          Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
+          Math.max(0, x.quantity ?? x.maximumQuantity ?? 1)
+        ),
+      }
 
 export function normalize(character: Character): Character {
   const stamina = Math.max(14, Math.min(24, character.attributes.stamina.maximum))
@@ -174,22 +206,14 @@ export function normalize(character: Character): Character {
       ...(x.armour === undefined ? {} : { armour: Math.max(0, x.armour) }),
       position: i + 1,
       slots: Math.max(1, x.slots || 1),
-      maximumQuantity: Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
-      quantity: Math.min(
-        Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
-        Math.max(0, x.quantity ?? x.maximumQuantity ?? 1)
-      ),
+      ...quantities(x),
     })),
     baselinePossessions: (character.baselinePossessions ?? []).map((x, i) => ({
       ...x,
       ...(x.armour === undefined ? {} : { armour: Math.max(0, x.armour) }),
       position: i + 1,
       slots: Math.max(1, x.slots || 1),
-      maximumQuantity: Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
-      quantity: Math.min(
-        Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
-        Math.max(0, x.quantity ?? x.maximumQuantity ?? 1)
-      ),
+      ...quantities(x),
     })),
   }
 }
