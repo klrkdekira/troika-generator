@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { loadGameData } from './data/load'
 import {
+  armour,
   d66,
   encumbrance,
   makeCharacter,
@@ -351,11 +352,6 @@ function Sheet({
   update: (p: Character) => void
 }) {
   const background = data.backgrounds.find(x => x.name === pc.background)
-  const baseline = (i: number, v: Partial<Item>) =>
-    update({
-      ...pc,
-      baselinePossessions: pc.baselinePossessions.map((x, j) => (j === i ? { ...x, ...v } : x)),
-    })
   const skill = (i: number, v: Partial<AdvancedSkill>) =>
     update({
       ...pc,
@@ -452,52 +448,15 @@ function Sheet({
         </div>
       ))}
       <WeaponDamage pc={pc} data={data} />
-      <h3>
-        Inventory ({burden.slots} used · {free} free of {maxSlots} · {burden.state})
-      </h3>
+      <h3>Inventory</h3>
       <div className="sheet-item-header">
         <span>Item</span>
+        <span>Armour</span>
         <span>Qty</span>
         <span>Slots</span>
         <span className="no-print"></span>
       </div>
       <InventorySheet pc={pc} update={update} normalFree={free} overburdenedFree={over} />
-      <h3>Baseline possessions</h3>
-      <div className="sheet-item-header">
-        <span>Possession</span>
-        <span>Qty</span>
-        <span>Slots</span>
-        <span className="no-print"></span>
-      </div>
-      {pc.baselinePossessions.map((x, i) => (
-        <div className={x.used ? 'sheet-item checked' : 'sheet-item'} key={x.position}>
-          <span className="item-label">{x.name}</span>
-          <span className="item-qty">
-            <label className="no-print">
-              <input
-                type="number"
-                min="0"
-                value={x.quantity ?? 0}
-                onChange={e => baseline(i, { quantity: Number(e.target.value) })}
-              />{' '}
-              /{' '}
-              <input
-                type="number"
-                min="0"
-                value={x.maximumQuantity ?? x.quantity ?? 0}
-                onChange={e => baseline(i, { maximumQuantity: Number(e.target.value) })}
-              />
-            </label>
-            <span className="print-resource print-quantity">
-              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
-            </span>
-          </span>
-          <span className="slot-display">
-            <span className="slot-value">{x.slots}</span>
-          </span>
-          <span className="no-print"></span>
-        </div>
-      ))}
       {pc.specialAbilities?.length ? (
         <>
           <h3>Special abilities</h3>
@@ -601,8 +560,30 @@ function InventorySheet({
   normalFree: number
   overburdenedFree: number
 }) {
+  const total = armour(pc)
+  // Armour is written in by the player: an input on screen, a box to fill on paper.
+  const protection = (possession: Item, set: (v: Partial<Item>) => void) => (
+    <span className="armour-display">
+      <input
+        className="no-print"
+        type="number"
+        min="0"
+        value={possession.armour ?? ''}
+        aria-label={`Armour from ${possession.name}`}
+        onChange={e => set({ armour: e.target.value === '' ? undefined : Number(e.target.value) })}
+      />
+      <span className="print-resource">
+        {possession.armour ?? <span className="print-resource-box"></span>}
+      </span>
+    </span>
+  )
   const change = (i: number, v: Partial<Item>) =>
     update({ ...pc, inventory: pc.inventory.map((x, j) => (j === i ? { ...x, ...v } : x)) })
+  const baseline = (i: number, v: Partial<Item>) =>
+    update({
+      ...pc,
+      baselinePossessions: pc.baselinePossessions.map((x, j) => (j === i ? { ...x, ...v } : x)),
+    })
   const move = (from: number, to: number) => {
     if (to < 0 || to >= pc.inventory.length) return
     const inventory = [...pc.inventory]
@@ -613,6 +594,12 @@ function InventorySheet({
   const blank = (key: string, over = false) => (
     <div className={over ? 'sheet-item blank over' : 'sheet-item blank'} key={key}>
       <span className="blank-name"></span>
+      <span className="blank-armour">
+        <span className="no-print empty-resource-box"></span>
+        <span className="print-resource">
+          <span className="print-resource-box"></span>
+        </span>
+      </span>
       <span className="blank-web">
         <span className="empty-resource-box"></span> / <span className="empty-resource-box"></span>
       </span>
@@ -629,6 +616,39 @@ function InventorySheet({
   )
   return (
     <>
+      {pc.baselinePossessions.map((x, i) => (
+        <div
+          className={x.used ? 'sheet-item checked' : 'sheet-item'}
+          key={`baseline-${x.position}`}
+        >
+          <span className="item-label">{x.name}</span>
+          {protection(x, v => baseline(i, v))}
+          <span className="item-qty">
+            <label className="no-print">
+              <input
+                type="number"
+                min="0"
+                value={x.quantity ?? 0}
+                onChange={e => baseline(i, { quantity: Number(e.target.value) })}
+              />{' '}
+              /{' '}
+              <input
+                type="number"
+                min="0"
+                value={x.maximumQuantity ?? x.quantity ?? 0}
+                onChange={e => baseline(i, { maximumQuantity: Number(e.target.value) })}
+              />
+            </label>
+            <span className="print-resource print-quantity">
+              <span className="print-resource-box"></span> / {x.maximumQuantity ?? x.quantity ?? 0}
+            </span>
+          </span>
+          <span className="slot-display">
+            <span className="slot-value">{x.slots}</span>
+          </span>
+          <span className="no-print"></span>
+        </div>
+      ))}
       {pc.inventory.map((x, i) => (
         <div className={x.used ? 'sheet-item checked' : 'sheet-item'} key={x.position}>
           <span className="item-label">
@@ -643,6 +663,7 @@ function InventorySheet({
               onChange={e => change(i, { name: e.target.value })}
             />
           </span>
+          {protection(x, v => change(i, v))}
           <span className="item-qty">
             <label className="no-print">
               <input
@@ -711,6 +732,20 @@ function InventorySheet({
         <div className="over-divider">Additional slots carry a −4 penalty</div>
       )}
       {Array.from({ length: overburdenedFree }, (_, i) => blank(`over-${i}`, true))}
+      <div className="sheet-item inventory-total">
+        <span className="item-label">
+          Armour
+          <small className="item-description">
+            Subtract from every Damage Roll against you; damage never drops below 1
+          </small>
+        </span>
+        <span className="armour-display total-value">
+          {total || <span className="print-resource-box"></span>}
+        </span>
+        <span></span>
+        <span></span>
+        <span className="no-print"></span>
+      </div>
       {pc.inventory.length < 18 && (
         <button
           className="no-print"

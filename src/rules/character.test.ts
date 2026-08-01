@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { d66, encumbrance, makeCharacter, normalize, rollExpression, skillType } from './character'
+import {
+  armour,
+  d66,
+  encumbrance,
+  makeCharacter,
+  normalize,
+  rollExpression,
+  skillType,
+} from './character'
 import { loadGameData } from '../data/load'
 import { validate } from '../export/character'
 
@@ -29,6 +37,33 @@ describe('Troika rules helpers', () => {
       { maxSlots: 12, severelyOverburdenedThreshold: 18 }
     )
     expect(result.state).toContain('overburdened')
+  })
+  it('totals the armour values written against inventory and baseline kit', () => {
+    const character = {
+      inventory: [
+        { name: 'Heavy Armour', position: 1, slots: 6, armour: 3 },
+        { name: 'Shield', position: 2, slots: 2, armour: 1 },
+        { name: 'Knife', position: 3, slots: 1 },
+      ],
+      baselinePossessions: [{ name: 'Rucksack', position: 1, slots: 1 }],
+    } as any
+    expect(armour(character)).toBe(4)
+    expect(armour({ inventory: [], baselinePossessions: [] } as any)).toBe(0)
+    // Normalisation keeps the entered value and refuses a negative one.
+    const normalised = normalize({
+      ...character,
+      attributes: {
+        skill: 5,
+        stamina: { current: 18, maximum: 18 },
+        luck: { current: 9, maximum: 9 },
+      },
+      advancedSkills: [],
+      inventory: [
+        ...character.inventory,
+        { name: 'Cursed Plate', position: 4, slots: 2, armour: -2 },
+      ],
+    } as any)
+    expect(normalised.inventory.map(x => x.armour)).toEqual([3, 1, undefined, 0])
   })
   it('parses and rolls item quantity expressions in background possessions', async () => {
     const data = await loadGameData()

@@ -171,6 +171,7 @@ export function normalize(character: Character): Character {
     })),
     inventory: character.inventory.slice(0, 18).map((x, i) => ({
       ...x,
+      ...(x.armour === undefined ? {} : { armour: Math.max(0, x.armour) }),
       position: i + 1,
       slots: Math.max(1, x.slots || 1),
       maximumQuantity: Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
@@ -181,6 +182,7 @@ export function normalize(character: Character): Character {
     })),
     baselinePossessions: (character.baselinePossessions ?? []).map((x, i) => ({
       ...x,
+      ...(x.armour === undefined ? {} : { armour: Math.max(0, x.armour) }),
       position: i + 1,
       slots: Math.max(1, x.slots || 1),
       maximumQuantity: Math.max(0, x.maximumQuantity ?? x.quantity ?? 1),
@@ -190,6 +192,14 @@ export function normalize(character: Character): Character {
       ),
     })),
   }
+}
+
+/** Damage reduction the player has written against their gear (SRD §9). */
+export function armour(character: Character) {
+  return [...character.inventory, ...(character.baselinePossessions ?? [])].reduce(
+    (sum, possession) => sum + Math.max(0, possession.armour ?? 0),
+    0
+  )
 }
 
 export function encumbrance(character: Character, rules: any) {

@@ -7,6 +7,8 @@ export interface Item {
   name: string
   position: number
   slots: number
+  /** Damage reduction, filled in by the player. */
+  armour?: number
   quantity?: number
   description?: string
   properties?: string[]
