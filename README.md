@@ -17,4 +17,4 @@ pnpm build
 
 Troika! Character Generator is an independent production by Chee Leong and is not affiliated with the Melsonian Arts Council.
 
-Data from Troika! System JSON by Chee Leong (MIT), based on the [Troika! SRD](https://troika-srd.netlify.app/). *Troika!* is a trademark of the Melsonian Arts Council. Source code is available under the MIT license in [LICENSE](LICENSE).
+Data from Troika! System JSON by Chee Leong (MIT), based on the [Troika! SRD](https://troika-srd.netlify.app/). _Troika!_ is a trademark of the Melsonian Arts Council. Source code is available under the MIT license in [LICENSE](LICENSE).

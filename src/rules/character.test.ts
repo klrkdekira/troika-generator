@@ -19,7 +19,13 @@ describe('Troika rules helpers', () => {
     expect(skillType('Knife Fighting')).toBe('weapon')
   })
   it('uses both inventory groups for encumbrance', () => {
-    const result = encumbrance({ inventory: Array.from({length: 12}, (_, position) => ({ name: 'x', position, slots: 1 })), baselinePossessions: [{ name: 'kit', position: 1, slots: 1 }] } as any, { maxSlots: 12, severelyOverburdenedThreshold: 18 })
+    const result = encumbrance(
+      {
+        inventory: Array.from({ length: 12 }, (_, position) => ({ name: 'x', position, slots: 1 })),
+        baselinePossessions: [{ name: 'kit', position: 1, slots: 1 }],
+      } as any,
+      { maxSlots: 12, severelyOverburdenedThreshold: 18 }
+    )
     expect(result.state).toContain('overburdened')
   })
 })

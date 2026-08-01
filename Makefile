@@ -1,4 +1,4 @@
-.PHONY: all install dev build lint test clean preview
+.PHONY: all install dev build lint format test clean preview
 
 # Default target
 all: build
@@ -18,6 +18,15 @@ build:
 # Run linter
 lint:
 	pnpm lint
+
+# Fix lint issues automatically
+lint-fix:
+	pnpm lint:fix
+
+
+# Format code
+format:
+	pnpm format
 
 # Run unit tests
 test:
