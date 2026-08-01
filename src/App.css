@@ -417,6 +417,13 @@ footer,
   font-weight: normal;
   color: #655d53;
 }
+/* Empty ruled rows for weapons acquired in play. */
+.damage-blank {
+  min-height: 1.9rem;
+}
+.damage-blank b {
+  min-height: 1em;
+}
 @media (max-width: 760px) {
   .damage-header,
   .damage-row {
@@ -674,6 +681,9 @@ footer,
     border-bottom: 0.5pt solid #888;
     padding: 0.8mm 0;
     break-inside: avoid;
+  }
+  .damage-blank {
+    min-height: 6mm;
   }
 }
 .print-current-box {

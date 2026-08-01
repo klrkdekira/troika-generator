@@ -541,11 +541,19 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     .filter(x => x.type === 'spell')
     .map(x => ({ weapon: x.name, values: data.spells.get(x.name)?.damageTable }))
     .filter(x => x.values) as Array<{ weapon: string; values: Record<string, string> }>
-  if (!rows.length && !spellRows.length) return null
-
-  const rolls = Array.from(new Set([...rows, ...spellRows].flatMap(r => Object.keys(r.values))))
+  // Roll columns come from the live tables so a sheet with no known weapon
+  // still prints a usable grid.
+  const declaredRolls = tables.flatMap(table => table.damageMatrix?.rollColumns ?? [])
+  const rolls = Array.from(
+    new Set([
+      ...[...rows, ...spellRows].flatMap(r => Object.keys(r.values)),
+      ...declaredRolls,
+      ...(declaredRolls.length ? [] : ['1', '2', '3', '4', '5', '6', '7+']),
+    ])
+  )
   const cell = (row: { values: Record<string, string> }) =>
     rolls.map(roll => <span key={roll}>{row.values[roll] ?? '—'}</span>)
+  const blankRows = 3
   return (
     <>
       <h3>{spellRows.length ? 'Weapon & spell damage' : 'Weapon damage'}</h3>
@@ -568,6 +576,15 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
               {row.weapon} <small>spell</small>
             </b>
             {cell(row)}
+          </div>
+        ))}
+        {/* Ruled rows for weapons picked up in play. */}
+        {Array.from({ length: blankRows }, (_, i) => (
+          <div className="damage-row damage-blank" key={`blank-${i}`}>
+            <b></b>
+            {rolls.map(roll => (
+              <span key={roll}></span>
+            ))}
           </div>
         ))}
       </div>
