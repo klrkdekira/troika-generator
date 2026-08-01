@@ -364,6 +364,17 @@ function Sheet({
   const { maxSlots, severelyOverburdenedThreshold } = data.manifest.rules.encumbrance
   const free = Math.max(0, maxSlots - burden.slots)
   const over = Math.max(0, severelyOverburdenedThreshold - Math.max(maxSlots, burden.slots))
+  const glossary = pc.advancedSkills.reduce<Array<{ name: string; description: string }>>(
+    (acc, x) => {
+      const description =
+        x.type === 'spell'
+          ? data.spells.get(x.name)?.description
+          : data.skills.get(x.name)?.description
+      if (description && !acc.some(g => g.name === x.name)) acc.push({ name: x.name, description })
+      return acc
+    },
+    []
+  )
   return (
     <section className="sheet">
       <div className="sheet-head">
@@ -401,6 +412,7 @@ function Sheet({
       <h3>Advanced skills</h3>
       <div className="sheet-skill-header">
         <span>Skill / Spell</span>
+        <span>Cost</span>
         <span>Rank</span>
         <span>Skill Total</span>
         <span className="header-check">Used</span>
@@ -409,9 +421,9 @@ function Sheet({
         <div className="sheet-skill" key={i}>
           <span>
             {x.name} <small>{x.type}</small>
-            {x.type === 'spell' && data.spells.get(x.name)?.cost && (
-              <em> Cost {data.spells.get(x.name).cost} Stamina</em>
-            )}
+          </span>
+          <span className="skill-cost">
+            {x.type === 'spell' ? (data.spells.get(x.name)?.cost ?? '') : ''}
           </span>
           <span className="skill-stat">
             <span className="web-current">{x.rank}</span>
@@ -493,10 +505,27 @@ function Sheet({
           </ul>
         </>
       ) : null}
-      {pc.notes && (
+      <h3>Notes</h3>
+      {pc.notes ? (
+        <p>{pc.notes}</p>
+      ) : (
+        <div className="notes-lines" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, i) => (
+            <span className="notes-line" key={i} />
+          ))}
+        </div>
+      )}
+      {glossary.length > 0 && (
         <>
-          <h3>Notes</h3>
-          <p>{pc.notes}</p>
+          <h3>Glossary</h3>
+          <ul className="glossary">
+            {glossary.map(g => (
+              <li key={g.name}>
+                <strong>{g.name}</strong>
+                <small className="item-description">{g.description}</small>
+              </li>
+            ))}
+          </ul>
         </>
       )}
       <p className="sheet-footer">{notice}</p>
