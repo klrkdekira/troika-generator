@@ -522,18 +522,23 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     .map(x => rowFor(x.name))
     .filter(Boolean) as Array<{ weapon: string; values: Record<string, string> }>
   if (!rows.length) return null
+
+  const rolls = Array.from(new Set(rows.flatMap(r => Object.keys(r.values))))
   return (
     <>
       <h3>Weapon damage</h3>
       <div className="damage-matrix">
+        <div className="damage-header">
+          <span>Weapon</span>
+          {rolls.map(roll => (
+            <span key={roll}>{roll}</span>
+          ))}
+        </div>
         {rows.map(row => (
           <div className="damage-row" key={row.weapon}>
             <b>{row.weapon}</b>
-            {Object.entries(row.values).map(([roll, damage]) => (
-              <span key={roll}>
-                <small>{roll}</small>
-                {damage}
-              </span>
+            {rolls.map(roll => (
+              <span key={roll}>{row.values[roll] ?? '—'}</span>
             ))}
           </div>
         ))}
