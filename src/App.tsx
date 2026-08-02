@@ -1018,8 +1018,13 @@ function InventorySheet({
         <span className="item-qty">
           <label className="no-print">{qtyInput}</label>
           <span className="print-resource print-quantity">
-            <span className="print-resource-box"></span> /{' '}
-            {maximum ?? <span className="print-resource-box"></span>}
+            <span className="print-resource-box"></span>
+            {!pc.unrolled && (
+              <>
+                {' / '}
+                {maximum ?? <span className="print-resource-box"></span>}
+              </>
+            )}
           </span>
         </span>
       )
