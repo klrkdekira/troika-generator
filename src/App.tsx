@@ -15,27 +15,34 @@ import { download, exportable, notice, validate } from './export/character'
 import type { AdvancedSkill, Character, GameData, Item } from './types'
 
 const fallback = 'Data from Troika! System JSON by Chee Leong (MIT).'
+
 export default function App() {
   const [data, setData] = useState<GameData>()
   const [pc, setPc] = useState<Character>()
   const [status, setStatus] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [roll, setRoll] = useState(true)
+  const [viewMode, setViewMode] = useState<'both' | 'editor' | 'sheet'>('both')
   const file = useRef<HTMLInputElement>(null)
+
   const load = () => {
     setStatus('Loading live data…')
     loadGameData((a, b) => setStatus(`Loading live data: ${a} of ${b}`))
       .then(setData)
       .catch(e => setStatus(`Unable to load data: ${e.message}`))
   }
+
   useEffect(load, [])
+
   const update = (next: Character) => setPc(normalize(next))
+
   const generate = (id?: number) => {
     const bg =
       data?.backgrounds.find(x => x.id === id) ??
       data?.backgrounds[Math.floor(Math.random() * (data?.backgrounds.length ?? 1))]
     if (data && bg) setPc(makeCharacter(bg, data, { roll }))
   }
+
   // Flipping the switch re-issues the open sheet in the new mode; name and
   // notes survive, everything the generator produces is redone.
   const rollMyOwn = (manual: boolean) => {
@@ -51,6 +58,7 @@ export default function App() {
     }
     setRoll(!manual)
   }
+
   // Back to the background list. The character only lives in memory, so warn
   // before dropping it.
   const home = () => {
@@ -60,6 +68,7 @@ export default function App() {
     setErrors([])
     setStatus('')
   }
+
   const importFile = async (f?: File) => {
     if (!f || !data) return
     try {
@@ -78,16 +87,26 @@ export default function App() {
       setErrors(['The selected file is not valid JSON.'])
     }
   }
+
   if (!data)
     return (
-      <main>
-        <h1>Troika! Character Generator</h1>
-        <p className="warning">{status || 'Starting…'}</p>
-        {status.startsWith('Unable') && <button onClick={load}>Retry</button>}
+      <main className="app-loading-state">
+        <div className="loading-card">
+          <div className="eyebrow">TROIKA! SYSTEM SRD</div>
+          <h1>Troika! Character Generator</h1>
+          <p className="status-message warning">{status || 'Starting engine…'}</p>
+          {status.startsWith('Unable') && (
+            <button className="btn-primary" onClick={load}>
+              Retry Loading Data
+            </button>
+          )}
+        </div>
         <Footer attribution={fallback} />
       </main>
     )
+
   const burden = pc && encumbrance(pc, data.manifest.rules.encumbrance)
+
   return (
     <main
       onDragOver={event => event.preventDefault()}
@@ -96,86 +115,166 @@ export default function App() {
         void importFile(event.dataTransfer.files[0])
       }}
     >
-      <header>
-        <div>
-          <p className="eyebrow">LIVE SRD CHARACTER TOOL</p>
+      <header className="app-header">
+        <div className="header-brand">
+          <div className="eyebrow-badge">
+            <span className="badge-dot"></span> LIVE SRD SYSTEM
+          </div>
           <h1>Troika! Character Generator</h1>
-          <p>Generate a table-ready character from live system data.</p>
+          <p className="header-subtitle">
+            Generate, customize, and print table-ready characters for Troika! TRPG.
+          </p>
         </div>
         <div className="actions no-print">
-          <label className="roll-toggle">
-            <input type="checkbox" checked={!roll} onChange={e => rollMyOwn(e.target.checked)} />
-            Let me roll my own dice
-          </label>
-          {pc && (
-            <button className="secondary" onClick={home}>
-              ← Backgrounds
+          <div className="actions-left">
+            {pc && (
+              <button className="btn-secondary" onClick={home}>
+                ← Backgrounds
+              </button>
+            )}
+          </div>
+          <div className="actions-center">
+            <button className="btn-primary" onClick={() => generate(d66())}>
+              Roll d66
             </button>
-          )}
-          <button onClick={() => generate(d66())}>Roll d66</button>
-          <button onClick={() => file.current?.click()}>Import JSON / drop file</button>
-          <input
-            ref={file}
-            hidden
-            type="file"
-            accept="application/json"
-            onChange={e => importFile(e.target.files?.[0])}
-          />
+            <label className="roll-toggle">
+              <input type="checkbox" checked={!roll} onChange={e => rollMyOwn(e.target.checked)} />
+              <span className="toggle-switch"></span>
+              Manual dice rolling mode
+            </label>
+          </div>
+          <div className="actions-right">
+            <button className="btn-outline" onClick={() => file.current?.click()}>
+              Import JSON
+            </button>
+            <input
+              ref={file}
+              hidden
+              type="file"
+              accept="application/json"
+              onChange={e => importFile(e.target.files?.[0])}
+            />
+          </div>
         </div>
       </header>
+
       {!pc ? (
         <Picker data={data} choose={generate} />
       ) : (
         <>
-          <section className="editor no-print">
-            <label>
-              Name
-              <input
-                value={pc.name}
-                placeholder="Character name"
-                onChange={e => update({ ...pc, name: e.target.value })}
-              />
-            </label>
-            <button
-              onClick={() => generate(data.backgrounds.find(x => x.name === pc.background)?.id)}
-            >
-              New {pc.background}
-            </button>
-            <AttributeEditor pc={pc} data={data} update={update} />
-            <SkillEditor pc={pc} data={data} update={update} />
-            <label>
-              Notes
-              <textarea
-                value={pc.notes ?? ''}
-                onChange={e => update({ ...pc, notes: e.target.value })}
-              />
-            </label>
-          </section>
-          <Sheet pc={pc} data={data} burden={burden!} update={update} />
+          <div className="view-mode-bar no-print">
+            <div className="view-mode-tabs" role="tablist" aria-label="View layout options">
+              <button
+                className={`tab-btn ${viewMode === 'both' ? 'active' : ''}`}
+                onClick={() => setViewMode('both')}
+              >
+                Split View (Editor + Sheet)
+              </button>
+              <button
+                className={`tab-btn ${viewMode === 'editor' ? 'active' : ''}`}
+                onClick={() => setViewMode('editor')}
+              >
+                Interactive Editor
+              </button>
+              <button
+                className={`tab-btn ${viewMode === 'sheet' ? 'active' : ''}`}
+                onClick={() => setViewMode('sheet')}
+              >
+                Sheet Preview
+              </button>
+            </div>
+            <div className="pc-quick-badge">
+              <span className="pc-name">{pc.name || 'Unnamed Adventurer'}</span>
+              <span className="pc-bg">{pc.background}</span>
+            </div>
+          </div>
+
+          <div className={`workspace workspace-mode-${viewMode}`}>
+            {(viewMode === 'both' || viewMode === 'editor') && (
+              <section className="editor no-print">
+                <div className="editor-section-head">
+                  <h2>Character Details</h2>
+                  <button
+                    className="btn-sm btn-outline"
+                    onClick={() =>
+                      generate(data.backgrounds.find(x => x.name === pc.background)?.id)
+                    }
+                  >
+                    New {pc.background}
+                  </button>
+                </div>
+
+                <div className="name-field-group">
+                  <label htmlFor="character-name-input">Character Name</label>
+                  <input
+                    id="character-name-input"
+                    className="name-input"
+                    value={pc.name}
+                    placeholder="Enter character name…"
+                    onChange={e => update({ ...pc, name: e.target.value })}
+                  />
+                </div>
+
+                <AttributeEditor pc={pc} data={data} update={update} />
+                <SkillEditor pc={pc} data={data} update={update} />
+
+                <div className="notes-field-group">
+                  <label htmlFor="character-notes-input">Notes & Backstory</label>
+                  <textarea
+                    id="character-notes-input"
+                    value={pc.notes ?? ''}
+                    placeholder="Record character details, quests, connections, or inventory notes…"
+                    onChange={e => update({ ...pc, notes: e.target.value })}
+                  />
+                </div>
+              </section>
+            )}
+
+            {(viewMode === 'both' || viewMode === 'sheet') && (
+              <div className="sheet-view-container">
+                <Sheet pc={pc} data={data} burden={burden!} update={update} />
+              </div>
+            )}
+          </div>
+
           <div className="export-bar no-print">
-            <button
-              onClick={() => {
-                const r = validate(
-                  exportable(pc, data.manifest.metadata.attribution || fallback),
-                  data.schema
-                )
-                setErrors(r.errors)
-                if (r.valid) download(pc, data.manifest.metadata.attribution || fallback)
-              }}
-            >
-              Download JSON
-            </button>
-            <button onClick={() => window.print()}>Print sheet / Save PDF</button>
+            <div className="export-actions">
+              <div className="export-actions-left"></div>
+              <div className="export-actions-center">
+                <button className="btn-primary" onClick={() => window.print()}>
+                  Print sheet / Save PDF
+                </button>
+              </div>
+              <div className="export-actions-right">
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    const r = validate(
+                      exportable(pc, data.manifest.metadata.attribution || fallback),
+                      data.schema
+                    )
+                    setErrors(r.errors)
+                    if (r.valid) download(pc, data.manifest.metadata.attribution || fallback)
+                  }}
+                >
+                  Download JSON
+                </button>
+              </div>
+            </div>
             {errors.length > 0 && (
-              <ul className="error">
-                {errors.map(x => (
-                  <li key={x}>{x}</li>
-                ))}
-              </ul>
+              <div className="error-alert">
+                <strong>Validation Errors:</strong>
+                <ul className="error">
+                  {errors.map(x => (
+                    <li key={x}>{x}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </>
       )}
+
       <Footer attribution={data.manifest.metadata.attribution || fallback} />
     </main>
   )
@@ -191,48 +290,59 @@ function AttributeEditor({
   update: (p: Character) => void
 }) {
   const dice = data.manifest.rules.coreRules.attributeGeneration
-  // Typing a value means the dice have been rolled after all.
   const set = (attributes: Character['attributes']) =>
     update({ ...pc, unrolled: undefined, attributes })
+
   return (
-    <>
-      <h2>Attributes</h2>
-      <div className="attributes">
-        <label>
-          Skill <span className="limit">limit 4–6</span>
-          <input
-            type="number"
-            value={pc.unrolled ? '' : pc.attributes.skill}
-            placeholder={dice.skill}
-            min="4"
-            max="6"
-            onChange={e => set({ ...pc.attributes, skill: Number(e.target.value) })}
-          />
-        </label>
+    <div className="editor-card attributes-editor">
+      <h3>Attributes</h3>
+      <div className="attributes-grid">
+        <div className="attribute-card">
+          <div className="attr-header">
+            <span className="attr-label">Skill</span>
+            <span className="limit-tag">Range: 4–6 ({dice.skill})</span>
+          </div>
+          <div className="attr-input-wrap">
+            <input
+              type="number"
+              value={pc.unrolled ? '' : pc.attributes.skill}
+              placeholder={dice.skill}
+              min="4"
+              max="6"
+              onChange={e => set({ ...pc.attributes, skill: Number(e.target.value) })}
+            />
+          </div>
+        </div>
+
         {(['stamina', 'luck'] as const).map(k => (
-          <label key={k}>
-            {k} <span className="limit">current / maximum</span>
-            <span>
+          <div className="attribute-card" key={k}>
+            <div className="attr-header">
+              <span className="attr-label">{k}</span>
+              <span className="limit-tag">Current / Max ({dice[k]})</span>
+            </div>
+            <div className="attr-dual-inputs">
               <input
                 type="number"
                 value={pc.unrolled ? '' : pc.attributes[k].current}
                 placeholder={dice[k]}
                 min="0"
                 max={pc.unrolled ? undefined : pc.attributes[k].maximum}
+                aria-label={`Current ${k}`}
                 onChange={e =>
                   set({
                     ...pc.attributes,
                     [k]: { ...pc.attributes[k], current: Number(e.target.value) },
                   })
                 }
-              />{' '}
-              /{' '}
+              />
+              <span className="sep">/</span>
               <input
                 type="number"
                 value={pc.unrolled ? '' : pc.attributes[k].maximum}
                 placeholder={dice[k]}
                 min={k === 'stamina' ? 14 : 7}
                 max={k === 'stamina' ? 24 : 12}
+                aria-label={`Maximum ${k}`}
                 onChange={e =>
                   set({
                     ...pc.attributes,
@@ -240,8 +350,9 @@ function AttributeEditor({
                   })
                 }
               />
-            </span>
+            </div>
             <button
+              className="btn-xs btn-outline attr-reroll"
               onClick={() => {
                 const n = rollExpression(data.manifest.rules.coreRules.attributeGeneration[k])
                 set({ ...pc.attributes, [k]: { ...pc.attributes[k], current: n, maximum: n } })
@@ -249,10 +360,10 @@ function AttributeEditor({
             >
               Re-roll max
             </button>
-          </label>
+          </div>
         ))}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -271,117 +382,148 @@ function SkillEditor({
       ...pc,
       advancedSkills: pc.advancedSkills.map((x, j) => (j === i ? { ...x, ...v } : x)),
     })
+
   return (
-    <>
-      <h2>Skills & advancement</h2>
-      <div className="skill-edit-header">
-        <span>Skill / Spell</span>
-        <span>Options</span>
-        <span>Rank</span>
-        <span>Skill Total</span>
-        <span className="header-check">Used</span>
-        <span>Actions</span>
-      </div>
-      {pc.advancedSkills.map((x, i) => (
-        <div className="skill-edit" key={`${x.name}-${i}`}>
-          <span className="skill-name-col">
-            <strong>{x.name}</strong> <small className="skill-type-tag">{x.type}</small>
-          </span>
-          <span className="skill-options-col">
-            {x.type === 'weapon' ? (
-              <select
-                className="weapon-select"
-                aria-label={`Change weapon for ${x.name}`}
-                value={weapons.find(name => x.name === `${name} Fighting`) ?? ''}
-                onChange={event => change(i, { name: `${event.target.value} Fighting` })}
-              >
-                <option value="">Choose weapon…</option>
-                {weapons.map(name => (
-                  <option key={name} value={name}>
-                    {name} Fighting
-                  </option>
-                ))}
-              </select>
-            ) : x.type === 'spell' ? (
-              <>
+    <div className="editor-card skills-editor">
+      <h3>Skills & Advancement</h3>
+      <div className="skill-edit-table">
+        <div className="skill-edit-header">
+          <span>Skill / Spell</span>
+          <span>Options</span>
+          <span>Rank</span>
+          <span>Total</span>
+          <span className="header-check">Used</span>
+          <span>Actions</span>
+        </div>
+        {pc.advancedSkills.map((x, i) => (
+          <div className="skill-edit" key={`${x.name}-${i}`}>
+            <span className="skill-name-col">
+              <strong className="skill-name">{x.name}</strong>
+              <small className={`skill-type-tag tag-${x.type}`}>{x.type}</small>
+            </span>
+            <span className="skill-options-col">
+              {x.type === 'weapon' ? (
                 <select
                   className="weapon-select"
-                  aria-label={`Change spell for ${x.name}`}
-                  value={data.spells.has(x.name) ? x.name : ''}
-                  onChange={event => change(i, { name: event.target.value })}
+                  aria-label={`Change weapon for ${x.name}`}
+                  value={weapons.find(name => x.name === `${name} Fighting`) ?? ''}
+                  onChange={event => change(i, { name: `${event.target.value} Fighting` })}
                 >
-                  <option value="">Choose spell…</option>
-                  {[...data.spells.keys()].map(name => (
+                  <option value="">Choose weapon…</option>
+                  {weapons.map(name => (
                     <option key={name} value={name}>
-                      {name}
+                      {name} Fighting
                     </option>
                   ))}
                 </select>
-                <button
-                  className="spell-reroll-btn"
-                  onClick={() => change(i, { name: randomSpell(data) ?? x.name })}
-                >
-                  Roll
-                </button>
-              </>
-            ) : (
-              <span className="no-option">—</span>
-            )}
-          </span>
-          <span className="edit-stat">
-            <input
-              type="number"
-              min="1"
-              value={x.rank}
-              aria-label={`Rank for ${x.name}`}
-              onChange={e => change(i, { rank: Number(e.target.value) })}
-            />
-          </span>
-          <span className="edit-stat">
-            <strong>{x.total}</strong>
-          </span>
-          <label className="edit-check">
-            <input
-              type="checkbox"
-              checked={Boolean(x.ticks)}
-              aria-label={`Skill used check for ${x.name}`}
-              onChange={e => change(i, { ticks: e.target.checked ? 1 : 0 })}
-            />
-          </label>
-          <span className="skill-actions-col">
-            <button onClick={() => change(i, { rank: x.rank + 1, ticks: 0 })}>Rank +1</button>
-          </span>
-        </div>
-      ))}
-    </>
+              ) : x.type === 'spell' ? (
+                <div className="spell-select-group">
+                  <select
+                    className="weapon-select"
+                    aria-label={`Change spell for ${x.name}`}
+                    value={data.spells.has(x.name) ? x.name : ''}
+                    onChange={event => change(i, { name: event.target.value })}
+                  >
+                    <option value="">Choose spell…</option>
+                    {[...data.spells.keys()].map(name => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="spell-reroll-btn btn-xs"
+                    onClick={() => change(i, { name: randomSpell(data) ?? x.name })}
+                  >
+                    Roll
+                  </button>
+                </div>
+              ) : (
+                <span className="no-option">—</span>
+              )}
+            </span>
+            <span className="edit-stat">
+              <input
+                type="number"
+                min="1"
+                value={x.rank}
+                aria-label={`Rank for ${x.name}`}
+                onChange={e => change(i, { rank: Number(e.target.value) })}
+              />
+            </span>
+            <span className="edit-stat total-badge">
+              <strong>{x.total}</strong>
+            </span>
+            <label className="edit-check">
+              <input
+                type="checkbox"
+                checked={Boolean(x.ticks)}
+                aria-label={`Skill used check for ${x.name}`}
+                onChange={e => change(i, { ticks: e.target.checked ? 1 : 0 })}
+              />
+            </label>
+            <span className="skill-actions-col">
+              <button
+                className="btn-xs btn-upgrade"
+                onClick={() => change(i, { rank: x.rank + 1, ticks: 0 })}
+              >
+                +1 Rank
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
 function Picker({ data, choose }: { data: GameData; choose: (id: number) => void }) {
   const [q, setQ] = useState('')
   const matches = data.backgrounds.filter(x => x.name.toLowerCase().includes(q.toLowerCase()))
+
   return (
     <section className="picker">
-      <div className="picker-head">
-        <h2>Choose a background</h2>
-        <label className="picker-filter">
-          Filter
-          <input value={q} placeholder="Name…" onChange={e => setQ(e.target.value)} />
-        </label>
+      <div className="picker-hero">
+        <h2>Choose or Roll Your Background</h2>
+        <p>Select from 36 unique Troika! backgrounds or roll a random character.</p>
+        <button className="btn-primary btn-hero-roll" onClick={() => choose(d66())}>
+          Roll Random Background (d66)
+        </button>
+      </div>
+
+      <div className="picker-filter-bar">
+        <div className="picker-search-wrap">
+          <input
+            value={q}
+            placeholder="Search backgrounds by name or keyword…"
+            onChange={e => setQ(e.target.value)}
+          />
+          {q && (
+            <button className="clear-btn" onClick={() => setQ('')}>
+              ✕
+            </button>
+          )}
+        </div>
         <p className="picker-count">
           {matches.length === data.backgrounds.length
-            ? `${matches.length} backgrounds`
-            : `${matches.length} of ${data.backgrounds.length}`}
+            ? `${matches.length} backgrounds available`
+            : `${matches.length} of ${data.backgrounds.length} backgrounds`}
         </p>
       </div>
+
       {matches.length === 0 ? (
         <p className="picker-empty">No background matches “{q}”.</p>
       ) : (
         <div className="backgrounds">
           {matches.map(x => (
             <button className="background-card" key={x.id} onClick={() => choose(x.id)}>
-              <span className="background-roll">{x.id}</span>
-              <b className="background-name">{x.name}</b>
+              <div className="background-card-header">
+                <b className="background-name">{x.name}</b>
+                <span className="background-roll-dice" title={`d66 roll ${x.id}`}>
+                  <span className="die-box">{String(x.id)[0]}</span>
+                  <span className="die-box">{String(x.id)[1]}</span>
+                </span>
+              </div>
               <span className="background-blurb">
                 {x.description || 'Generate this character.'}
               </span>
@@ -406,21 +548,24 @@ function Sheet({
 }) {
   const background = data.backgrounds.find(x => x.name === pc.background)
   const dice = data.manifest.rules.coreRules.attributeGeneration
-  // Picks the generator was told not to make: the sheet asks for them instead.
+
   const unpicked = (x: AdvancedSkill) =>
     x.name === 'Random'
       ? 'random spell'
       : x.name === 'Fighting in chosen weapon'
         ? 'chosen weapon'
         : ''
+
   const skill = (i: number, v: Partial<AdvancedSkill>) =>
     update({
       ...pc,
       advancedSkills: pc.advancedSkills.map((x, j) => (j === i ? { ...x, ...v } : x)),
     })
+
   const { maxSlots, severelyOverburdenedThreshold } = data.manifest.rules.encumbrance
   const free = Math.max(0, maxSlots - burden.slots)
   const over = Math.max(0, severelyOverburdenedThreshold - Math.max(maxSlots, burden.slots))
+
   const glossary = pc.advancedSkills.reduce<Array<{ name: string; description: string }>>(
     (acc, x) => {
       const description =
@@ -432,6 +577,9 @@ function Sheet({
     },
     []
   )
+
+  const encPercent = Math.min(100, Math.round((burden.slots / maxSlots) * 100))
+
   return (
     <section className="sheet">
       <div className="sheet-head">
@@ -442,52 +590,61 @@ function Sheet({
           </h2>
           <span className="head-background">{pc.background}</span>
         </div>
-        <p className="header-stat head-skill">
-          <span>SKILL</span>
-          <b>
-            {pc.unrolled ? (
-              <>
-                <span className="web-current">—</span>
-                <span className="print-resource">
-                  <span className="print-current-box" aria-label="Skill"></span>
-                </span>
-              </>
-            ) : (
-              pc.attributes.skill
-            )}
-          </b>
-          {pc.unrolled && <small className="to-roll">{dice.skill}</small>}
-        </p>
-        {(['stamina', 'luck'] as const).map(key => (
-          <p className="header-stat" key={key}>
-            <span>{key === 'stamina' ? 'STAMINA' : 'LUCK'}</span>
-            <b>
-              {pc.unrolled ? (
-                <>
-                  <span className="web-current">—</span>
-                  <span className="print-resource paired">
-                    <span className="print-current-box" aria-label={`Current ${key}`}></span> /{' '}
-                    <span className="print-current-box" aria-label={`Maximum ${key}`}></span>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="web-current">{pc.attributes[key].current}</span>
-                  <span className="print-current-box" aria-label={`Current ${key}`}></span> /{' '}
-                  {pc.attributes[key].maximum}
-                </>
-              )}
-            </b>
-            {pc.unrolled && <small className="to-roll">{dice[key]}</small>}
-          </p>
-        ))}
+        <div className="head-stats-group">
+          {(['skill', 'stamina', 'luck'] as const).map(key => {
+            const label = key.toUpperCase()
+            const val = key === 'skill' ? pc.attributes.skill : pc.attributes[key].current
+            const maxVal = key === 'skill' ? undefined : pc.attributes[key].maximum
+            const diceFormula = dice[key]
+
+            return (
+              <p className={`header-stat head-${key}`} key={key}>
+                <span>{label}</span>
+                <b>
+                  {pc.unrolled ? (
+                    <>
+                      <span className="web-current">—</span>
+                      <span className={`print-resource${key !== 'skill' ? ' paired' : ''}`}>
+                        <span className="print-current-box" aria-label={`Current ${key}`}></span>
+                        {key !== 'skill' && (
+                          <>
+                            {' / '}
+                            <span
+                              className="print-current-box"
+                              aria-label={`Maximum ${key}`}
+                            ></span>
+                          </>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="web-current">{val}</span>
+                      {key === 'skill' ? (
+                        <span className="print-only">{val}</span>
+                      ) : (
+                        <span className="print-resource paired">
+                          <span className="print-current-box" aria-label={`Current ${key}`}></span>{' '}
+                          / {maxVal}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </b>
+                {pc.unrolled && <small className="to-roll">{diceFormula}</small>}
+              </p>
+            )
+          })}
+        </div>
       </div>
+
       {background?.description && (
         <div className="background-description">
           <h3>Background</h3>
           <p>{background.description}</p>
         </div>
       )}
+
       <h3>Advanced skills</h3>
       <div className="sheet-skill-header">
         <span>Skill / Spell</span>
@@ -542,7 +699,9 @@ function Sheet({
           </label>
         </div>
       ))}
+
       <WeaponDamage pc={pc} data={data} />
+
       <div className="inventory-header-bar">
         <h3>Inventory</h3>
         <div className="encumbrance-tracker">
@@ -559,6 +718,13 @@ function Sheet({
           )}
         </div>
       </div>
+      <div className="encumbrance-progress-bar no-print">
+        <div
+          className={`progress-fill ${burden.state !== 'unencumbered' ? 'overburdened' : ''}`}
+          style={{ width: `${encPercent}%` }}
+        />
+      </div>
+
       <div className="sheet-item-header">
         <span>Item</span>
         <span>Armour</span>
@@ -567,6 +733,7 @@ function Sheet({
         <span className="no-print"></span>
       </div>
       <InventorySheet pc={pc} update={update} normalFree={free} overburdenedFree={over} />
+
       {pc.specialAbilities?.length ? (
         <>
           <h3>Special abilities</h3>
@@ -577,6 +744,7 @@ function Sheet({
           </ul>
         </>
       ) : null}
+
       <h3>Notes</h3>
       {pc.notes ? (
         <p>{pc.notes}</p>
@@ -587,6 +755,7 @@ function Sheet({
           ))}
         </div>
       )}
+
       {glossary.length > 0 && (
         <>
           <h3>Glossary</h3>
@@ -600,6 +769,7 @@ function Sheet({
           </ul>
         </>
       )}
+
       <p className="sheet-footer">{notice}</p>
     </section>
   )
@@ -630,7 +800,6 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     if (row) rawRows.push(row)
   }
 
-  // Universal default unarmed damage row for all characters
   addWeaponRow('Unarmed')
 
   for (const item of [...pc.inventory, ...pc.baselinePossessions]) {
@@ -640,7 +809,6 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     addWeaponRow(skill.name)
   }
 
-  // Consolidate rows by canonical weapon table name (e.g. Sword, Axe, Unarmed, Knife)
   const rowsByWeaponKey = new Map<
     string,
     { weapon: string; alias?: string; values: Record<string, string> }
@@ -674,8 +842,7 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     .filter(x => x.type === 'spell')
     .map(x => ({ weapon: x.name, values: data.spells.get(x.name)?.damageTable }))
     .filter(x => x.values) as Array<{ weapon: string; values: Record<string, string> }>
-  // Roll columns come from the live tables so a sheet with no known weapon
-  // still prints a usable grid.
+
   const declaredRolls = tables.flatMap(table => table.damageMatrix?.rollColumns ?? [])
   const rolls = Array.from(
     new Set([
@@ -687,6 +854,7 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
   const cell = (row: { values: Record<string, string> }) =>
     rolls.map(roll => <span key={roll}>{row.values[roll] ?? '—'}</span>)
   const blankRows = 3
+
   return (
     <>
       <h3>{spellRows.length ? 'Weapon & spell damage' : 'Weapon damage'}</h3>
@@ -716,7 +884,6 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
             {cell(row)}
           </div>
         ))}
-        {/* Ruled rows for weapons picked up in play. */}
         {Array.from({ length: blankRows }, (_, i) => (
           <div className="damage-row damage-blank" key={`blank-${i}`}>
             <b></b>
@@ -742,7 +909,6 @@ function InventorySheet({
   overburdenedFree: number
 }) {
   const total = armour(pc)
-  // Armour is written in by the player: an input on screen, a box to fill on paper.
   const protection = (possession: Item, set: (v: Partial<Item>) => void) => {
     const val = possession.armour ?? possession.armor
     return (
@@ -764,8 +930,7 @@ function InventorySheet({
       </span>
     )
   }
-  // A possession with no quantity is one the player still has to roll for, so
-  // both fields stay empty rather than defaulting to zero.
+
   const quantityCell = (possession: Item, set: (v: Partial<Item>) => void) => {
     const maximum = possession.maximumQuantity ?? possession.quantity
     const isPence = possession.name.toLowerCase().includes('pence')
@@ -804,13 +969,16 @@ function InventorySheet({
       </span>
     )
   }
+
   const change = (i: number, v: Partial<Item>) =>
     update({ ...pc, inventory: pc.inventory.map((x, j) => (j === i ? { ...x, ...v } : x)) })
+
   const baseline = (i: number, v: Partial<Item>) =>
     update({
       ...pc,
       baselinePossessions: pc.baselinePossessions.map((x, j) => (j === i ? { ...x, ...v } : x)),
     })
+
   const move = (from: number, to: number) => {
     if (to < 0 || to >= pc.inventory.length) return
     const inventory = [...pc.inventory]
@@ -818,6 +986,7 @@ function InventorySheet({
     inventory.splice(to, 0, moved)
     update({ ...pc, inventory })
   }
+
   const blank = (key: string, over = false) => (
     <div className={over ? 'sheet-item blank over' : 'sheet-item blank'} key={key}>
       <span className="blank-name"></span>
@@ -841,6 +1010,7 @@ function InventorySheet({
       </span>
     </div>
   )
+
   return (
     <>
       {pc.baselinePossessions.map((x, i) => (
@@ -888,6 +1058,7 @@ function InventorySheet({
           </span>
           <span className="no-print inventory-actions">
             <button
+              className="btn-icon"
               disabled={i === 0}
               aria-label={`Move ${x.name} up`}
               onClick={() => move(i, i - 1)}
@@ -895,13 +1066,14 @@ function InventorySheet({
               ↑
             </button>
             <button
+              className="btn-icon"
               disabled={i === pc.inventory.length - 1}
               aria-label={`Move ${x.name} down`}
               onClick={() => move(i, i + 1)}
             >
               ↓
             </button>
-            <label>
+            <label className="used-label-pill">
               <input
                 type="checkbox"
                 checked={Boolean(x.used)}
@@ -910,7 +1082,7 @@ function InventorySheet({
               Used
             </label>
             <button
-              className="remove"
+              className="remove btn-danger"
               onClick={() => update({ ...pc, inventory: pc.inventory.filter((_, j) => j !== i) })}
             >
               Remove
@@ -925,7 +1097,7 @@ function InventorySheet({
       {Array.from({ length: overburdenedFree }, (_, i) => blank(`over-${i}`, true))}
       <div className="sheet-item inventory-total">
         <span className="item-label">
-          Armour
+          Armour Total
           <small className="item-description">
             Subtract from every Damage Roll against you; damage never drops below 1
           </small>
@@ -948,7 +1120,7 @@ function InventorySheet({
       </div>
       {pc.inventory.length < 18 && (
         <button
-          className="no-print"
+          className="no-print btn-outline add-item-btn"
           onClick={() =>
             update({
               ...pc,
@@ -967,17 +1139,42 @@ function InventorySheet({
 }
 
 function Footer({ attribution }: { attribution: string }) {
+  const systemJsonUrl = 'https://cheeleong.dev/troika-system-json/'
+  const renderAttribution = () => {
+    if (attribution.includes('Troika! System JSON')) {
+      const parts = attribution.split('Troika! System JSON')
+      return (
+        <>
+          {parts[0]}
+          <a href={systemJsonUrl} target="_blank" rel="noreferrer">
+            Troika! System JSON
+          </a>
+          {parts[1]}
+        </>
+      )
+    }
+    return (
+      <>
+        {attribution}{' '}
+        <a href={systemJsonUrl} target="_blank" rel="noreferrer">
+          Troika! System JSON
+        </a>
+        .{' '}
+      </>
+    )
+  }
+
   return (
-    <footer>
-      <p>{notice}</p>
-      <p>
-        {attribution} Based on the{' '}
+    <footer className="app-footer">
+      <p className="legal-notice">{notice}</p>
+      <p className="attribution">
+        {renderAttribution()} Based on the{' '}
         <a href="https://troika-srd.netlify.app/" target="_blank" rel="noreferrer">
           Troika! SRD
         </a>
         . <i>Troika!</i> is a trademark of the Melsonian Arts Council.
       </p>
-      <p>
+      <p className="github-link">
         <a href="https://github.com/klrkdekira/troika-generator" target="_blank" rel="noreferrer">
           View source on GitHub
         </a>
