@@ -86,7 +86,9 @@ describe('Troika rules helpers', () => {
 
     // Normalize must preserve slot 0
     const normalizedLans = normalize(lansChar)
-    const normClothes = normalizedLans.inventory.find(i => i.name.includes('Brightly Coloured Clothing'))
+    const normClothes = normalizedLans.inventory.find(i =>
+      i.name.includes('Brightly Coloured Clothing')
+    )
     expect(normClothes?.slots).toBe(0)
 
     // Encumbrance slot 0 item must not consume an encumbrance slot
@@ -182,5 +184,14 @@ describe('Troika rules helpers', () => {
     expect(result.attributes.stamina).toMatchObject({ maximum: 24, current: 24 })
     expect(result.attributes.luck).toMatchObject({ maximum: 7, current: 0 })
     expect(result.advancedSkills[0].total).toBe(9)
+  })
+  it('assigns 1 slot by default to baseline possessions', async () => {
+    const data = await loadGameData()
+    const burglar = data.backgrounds.find(b => b.name === 'Burglar')!
+    const character = makeCharacter(burglar, data)
+    expect(character.baselinePossessions.length).toBeGreaterThan(0)
+    for (const item of character.baselinePossessions) {
+      expect(item.slots).toBe(1)
+    }
   })
 })

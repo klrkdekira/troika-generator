@@ -714,6 +714,7 @@ function InventorySheet({
   // both fields stay empty rather than defaulting to zero.
   const quantityCell = (possession: Item, set: (v: Partial<Item>) => void) => {
     const maximum = possession.maximumQuantity ?? possession.quantity
+    const isPence = possession.name.toLowerCase().includes('pence')
     const number = (value: number | undefined, key: 'quantity' | 'maximumQuantity') => (
       <input
         type="number"
@@ -723,6 +724,20 @@ function InventorySheet({
         onChange={e => set({ [key]: e.target.value === '' ? undefined : Number(e.target.value) })}
       />
     )
+    if (isPence) {
+      return (
+        <span className="item-qty">
+          <label className="no-print">{number(possession.quantity, 'quantity')}</label>
+          <span className="print-resource print-quantity">
+            {possession.quantity !== undefined && possession.quantity !== 0 ? (
+              possession.quantity
+            ) : (
+              <span className="print-resource-box"></span>
+            )}
+          </span>
+        </span>
+      )
+    }
     return (
       <span className="item-qty">
         <label className="no-print">
@@ -779,7 +794,9 @@ function InventorySheet({
           className={x.used ? 'sheet-item checked' : 'sheet-item'}
           key={`baseline-${x.position}`}
         >
-          <span className="item-label">{x.name}</span>
+          <span className="item-label">
+            {x.name} <small className="baseline-tag">baseline</small>
+          </span>
           {protection(x, v => baseline(i, v))}
           {quantityCell(x, v => baseline(i, v))}
           <span className="slot-display">

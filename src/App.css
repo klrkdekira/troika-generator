@@ -1206,3 +1206,8 @@ footer,
     height: 6mm;
   }
 }
+
+.baseline-tag {
+  font-weight: normal;
+  color: #655d53;
+}
