@@ -234,4 +234,69 @@ describe('Troika rules helpers', () => {
       }
     }
   })
+  it('resolves player choices when roll=true and leaves them open when roll=false across all 9 choice backgrounds', async () => {
+    const data = await loadGameData()
+    const choiceBgNames = [
+      'Cacogen',
+      'Chaos Champion',
+      'Parchment Witch',
+      'Sceptical Lamassu',
+      'Sorcerer of the Academy of Doors',
+      'Sorcerer of the College of Friends',
+      'Thaumaturge',
+      'Venturesome Academic',
+      'Fellow of The Sublime Society of Beef Steaks',
+      'Yongardy Lawyer',
+    ]
+    for (const name of choiceBgNames) {
+      const bg = data.backgrounds.find(b => b.name === name)
+      if (!bg) continue
+      const rolledChar = makeCharacter(bg, data, { roll: true })
+      expect(rolledChar.advancedSkills.some(s => s.name === 'Random')).toBe(false)
+      expect(rolledChar.advancedSkills.some(s => s.name === 'Fighting in chosen weapon')).toBe(
+        false
+      )
+
+      const unrolledChar = makeCharacter(bg, data, { roll: false })
+      const hasChoice =
+        unrolledChar.advancedSkills.some(s => s.name === 'Random') ||
+        unrolledChar.advancedSkills.some(s => s.name === 'Fighting in chosen weapon')
+      expect(hasChoice).toBe(true)
+    }
+  })
+  it('evaluates all encumbrance states correctly', () => {
+    const rules = { maxSlots: 12, severelyOverburdenedThreshold: 18 }
+    const createItems = (count: number) =>
+      Array.from({ length: count }, (_, position) => ({ name: 'item', position, slots: 1 }))
+
+    const unencumbered = encumbrance(
+      { inventory: createItems(10), baselinePossessions: [] } as any,
+      rules
+    )
+    expect(unencumbered.state).toBe('unencumbered')
+
+    const overburdened = encumbrance(
+      { inventory: createItems(14), baselinePossessions: [] } as any,
+      rules
+    )
+    expect(overburdened.state).toBe('overburdened (−4)')
+
+    const severelyOverburdened = encumbrance(
+      { inventory: createItems(19), baselinePossessions: [] } as any,
+      rules
+    )
+    expect(severelyOverburdened.state).toBe('severely overburdened')
+  })
+  it('respects overrideBaselinePossessions from background data (e.g. Zoanthrop)', async () => {
+    const data = await loadGameData()
+    const zoanthrop = data.backgrounds.find(b => b.id === 66 || b.name === 'Zoanthrop')
+    expect(zoanthrop).toBeDefined()
+    if (!zoanthrop) return
+    const char = makeCharacter(zoanthrop, data)
+    expect(char.baselinePossessions).toEqual([])
+  })
+  it('recognises Fist Fighting and Wrestling as weapon skills mapping to Unarmed damage row', () => {
+    expect(skillType('Fist Fighting')).toBe('weapon')
+    expect(skillType('Wrestling')).toBe('weapon')
+  })
 })

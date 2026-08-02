@@ -608,7 +608,10 @@ function Sheet({
 function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
   const tables = [...data.tables.values()]
   const rowFor = (name: string, damageAs?: string) => {
-    const weapon = damageAs ?? (name.endsWith(' Fighting') ? name.slice(0, -9) : name)
+    let weapon = damageAs ?? (name.endsWith(' Fighting') ? name.slice(0, -9) : name)
+    if (['fist', 'fist fighting', 'wrestling'].includes(weapon.toLowerCase())) {
+      weapon = 'Unarmed'
+    }
     for (const table of tables) {
       const matrix = table.damageMatrix?.matrix
       if (!matrix) continue
@@ -620,23 +623,53 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     }
     return undefined
   }
-  const rowsByWeapon = new Map<
-    string,
-    { weapon: string; alias?: string; values: Record<string, string> }
-  >()
+  const rawRows: Array<{ weapon: string; alias?: string; values: Record<string, string> }> = []
+
   const addWeaponRow = (name: string, damageAs?: string) => {
     const row = rowFor(name, damageAs)
-    if (row && !rowsByWeapon.has(row.weapon.toLowerCase())) {
-      rowsByWeapon.set(row.weapon.toLowerCase(), row)
-    }
+    if (row) rawRows.push(row)
   }
+
+  // Universal default unarmed damage row for all characters
+  addWeaponRow('Unarmed')
+
   for (const item of [...pc.inventory, ...pc.baselinePossessions]) {
     if (item.damageAs) addWeaponRow(item.name, item.damageAs)
   }
   for (const skill of pc.advancedSkills.filter(x => x.type === 'weapon')) {
     addWeaponRow(skill.name)
   }
-  const rows = [...rowsByWeapon.values()]
+
+  // Consolidate rows by canonical weapon table name (e.g. Sword, Axe, Unarmed, Knife)
+  const rowsByWeaponKey = new Map<
+    string,
+    { weapon: string; alias?: string; values: Record<string, string> }
+  >()
+  const grouped = new Map<string, typeof rawRows>()
+  for (const row of rawRows) {
+    const key = row.weapon.toLowerCase()
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key)!.push(row)
+  }
+
+  for (const [key, group] of grouped) {
+    const baseRow = group[0]
+    const aliases = Array.from(
+      new Set(
+        group
+          .map(r => r.alias)
+          .filter(
+            (a): a is string => Boolean(a) && a?.toLowerCase() !== baseRow.weapon.toLowerCase()
+          )
+      )
+    )
+    rowsByWeaponKey.set(key, {
+      ...baseRow,
+      alias: aliases.length ? aliases.join(', ') : undefined,
+    })
+  }
+
+  const rows = [...rowsByWeaponKey.values()]
   const spellRows = pc.advancedSkills
     .filter(x => x.type === 'spell')
     .map(x => ({ weapon: x.name, values: data.spells.get(x.name)?.damageTable }))

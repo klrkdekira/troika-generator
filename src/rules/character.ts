@@ -148,7 +148,6 @@ export function makeCharacter(
       convert(x.name === 'Random' && roll ? { ...x, name: randomSpell(data) ?? x.name } : x, true)
     ),
   ]
-  const zoanthrop = background.id === 66
   return {
     name: '',
     background: background.name,
@@ -168,10 +167,9 @@ export function makeCharacter(
     inventory: (background.possessions ?? [])
       .slice(0, 18)
       .map((entry, position) => item(entry, position + 1, roll, data)),
-    baselinePossessions:
-      background.overrideBaselinePossessions || zoanthrop
-        ? []
-        : baseline(rules.baselinePossessions, roll, data),
+    baselinePossessions: background.overrideBaselinePossessions
+      ? []
+      : baseline(rules.baselinePossessions, roll, data),
     initiativeTokens: data.manifest.rules.initiative.playerTokens,
     specialAbilities: background.special ?? [],
     languages: advancedSkills.filter(x => x.type === 'language').map(x => x.specialization!),
