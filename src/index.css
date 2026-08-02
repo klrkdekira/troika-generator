@@ -19,5 +19,7 @@ a {
   body {
     background: #fff !important;
     background-color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

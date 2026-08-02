@@ -356,6 +356,8 @@ footer,
     background: #fff !important;
     background-color: #fff !important;
     box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .no-print,
   header,
@@ -367,11 +369,16 @@ footer,
   }
   main {
     padding: 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
   }
   .sheet {
     box-shadow: none;
     border: 0;
     padding: 0;
+    margin: 0;
+    width: 100%;
   }
   .sheet-skill,
   .sheet-item {
@@ -731,6 +738,7 @@ footer,
     display: none !important;
   }
   .print-current-box {
+    box-sizing: border-box !important;
     display: inline-block !important;
     width: 13mm;
     height: 8mm;
