@@ -42,14 +42,15 @@ describe('Troika rules helpers', () => {
     const character = {
       inventory: [
         { name: 'Heavy Armour', position: 1, slots: 6, armour: 3 },
-        { name: 'Shield', position: 2, slots: 2, armour: 1 },
+        { name: 'Shield', position: 2, slots: 2, armor: 1 },
         { name: 'Knife', position: 3, slots: 1 },
+        { name: 'Tassels', position: 4, slots: 0, armour: 2 },
       ],
       baselinePossessions: [{ name: 'Rucksack', position: 1, slots: 1 }],
     } as any
-    expect(armour(character)).toBe(4)
+    expect(armour(character)).toBe(6)
     expect(armour({ inventory: [], baselinePossessions: [] } as any)).toBe(0)
-    // Normalisation keeps the entered value and refuses a negative one.
+    // Normalisation keeps the entered value, syncs armor/armour, preserves 0 slots, and refuses negative values.
     const normalised = normalize({
       ...character,
       attributes: {
@@ -60,10 +61,26 @@ describe('Troika rules helpers', () => {
       advancedSkills: [],
       inventory: [
         ...character.inventory,
-        { name: 'Cursed Plate', position: 4, slots: 2, armour: -2 },
+        { name: 'Cursed Plate', position: 5, slots: 2, armour: -2 },
       ],
     } as any)
-    expect(normalised.inventory.map(x => x.armour)).toEqual([3, 1, undefined, 0])
+    expect(normalised.inventory.map(x => x.armour)).toEqual([3, 1, undefined, 2, 0])
+    expect(normalised.inventory.map(x => x.armor)).toEqual([3, 1, undefined, 2, 0])
+    expect(normalised.inventory.map(x => x.slots)).toEqual([6, 2, 1, 0, 2])
+  })
+  it('parses armour and slots from background possessions data', async () => {
+    const data = await loadGameData()
+    const qKnight = data.backgrounds.find(b => b.name === 'Questing Knight')!
+    expect(qKnight).toBeDefined()
+    const knightChar = makeCharacter(qKnight, data)
+    expect(armour(knightChar)).toBe(4)
+
+    const lansquenet = data.backgrounds.find(b => b.name === 'Lansquenet')!
+    expect(lansquenet).toBeDefined()
+    const lansChar = makeCharacter(lansquenet, data)
+    const clothes = lansChar.inventory.find(i => i.name.includes('Clothing'))
+    expect(clothes?.slots).toBe(0)
+    expect(clothes?.armour).toBe(2)
   })
   it('parses and rolls item quantity expressions in background possessions', async () => {
     const data = await loadGameData()

@@ -674,21 +674,27 @@ function InventorySheet({
 }) {
   const total = armour(pc)
   // Armour is written in by the player: an input on screen, a box to fill on paper.
-  const protection = (possession: Item, set: (v: Partial<Item>) => void) => (
-    <span className="armour-display">
-      <input
-        className="no-print"
-        type="number"
-        min="0"
-        value={possession.armour ?? ''}
-        aria-label={`Armour from ${possession.name}`}
-        onChange={e => set({ armour: e.target.value === '' ? undefined : Number(e.target.value) })}
-      />
-      <span className="print-resource">
-        {possession.armour ?? <span className="print-resource-box"></span>}
+  const protection = (possession: Item, set: (v: Partial<Item>) => void) => {
+    const val = possession.armour ?? possession.armor
+    return (
+      <span className="armour-display">
+        <input
+          className="no-print"
+          type="number"
+          min="0"
+          value={val ?? ''}
+          aria-label={`Armour from ${possession.name}`}
+          onChange={e => {
+            const num = e.target.value === '' ? undefined : Number(e.target.value)
+            set({ armour: num, armor: num })
+          }}
+        />
+        <span className="print-resource">
+          {val ?? <span className="print-resource-box"></span>}
+        </span>
       </span>
-    </span>
-  )
+    )
+  }
   // A possession with no quantity is one the player still has to roll for, so
   // both fields stay empty rather than defaulting to zero.
   const quantityCell = (possession: Item, set: (v: Partial<Item>) => void) => {
@@ -787,10 +793,10 @@ function InventorySheet({
             <input
               className="no-print"
               type="number"
-              min="1"
+              min="0"
               value={x.slots}
               aria-label={`Slots used by ${x.name}`}
-              onChange={e => change(i, { slots: Number(e.target.value) })}
+              onChange={e => change(i, { slots: Math.max(0, Number(e.target.value)) })}
             />
             <span className="slot-value">{x.slots}</span>
           </span>
@@ -839,7 +845,16 @@ function InventorySheet({
           </small>
         </span>
         <span className="armour-display total-value">
-          {total || <span className="print-resource-box"></span>}
+          <span className="web-current">{total}</span>
+          <span className="print-resource">
+            {total ? (
+              <>
+                <span className="print-resource-box"></span> / {total}
+              </>
+            ) : (
+              <span className="print-resource-box"></span>
+            )}
+          </span>
         </span>
         <span></span>
         <span></span>

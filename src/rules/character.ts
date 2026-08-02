@@ -49,6 +49,15 @@ const parseQuantity = (value: unknown): number | undefined => {
   return undefined
 }
 
+const parseArmor = (source: any): number | undefined => {
+  const val = source.armor ?? source.armour
+  if (typeof val === 'number') return val
+  if (typeof val === 'object' && val !== null && typeof val.protection === 'number') {
+    return val.protection
+  }
+  return undefined
+}
+
 const dice = /^\d*d\d+([+-]\d+)?$/i
 
 const item = (source: any, position: number, roll = true): Item => {
@@ -56,9 +65,11 @@ const item = (source: any, position: number, roll = true): Item => {
   const declared = typeof source.quantity === 'string' ? source.quantity.trim() : source.quantity
   const declaredDice = typeof declared === 'string' && dice.test(declared)
   const diceInName = name.match(/^(\d*d\d+([+-]\d+)?) (.+)$/i)
+  const armorVal = parseArmor(source)
   const common = {
     position,
-    slots: source.slots ?? 1,
+    slots: Math.max(0, source.slots ?? 1),
+    ...(armorVal !== undefined ? { armour: armorVal, armor: armorVal } : {}),
     description: source.description,
     properties: source.properties,
     readyForUse: false,
@@ -180,6 +191,18 @@ export function normalize(character: Character): Character {
   const stamina = Math.max(14, Math.min(24, character.attributes.stamina.maximum))
   const luck = Math.max(7, Math.min(12, character.attributes.luck.maximum))
   const skill = Math.max(4, Math.min(6, character.attributes.skill))
+  const normalizeItem = (x: Item, i: number): Item => {
+    const armorVal = x.armour ?? x.armor
+    const cleanArmor =
+      armorVal === undefined ? {} : { armour: Math.max(0, armorVal), armor: Math.max(0, armorVal) }
+    return {
+      ...x,
+      ...cleanArmor,
+      position: i + 1,
+      slots: Math.max(0, x.slots ?? 1),
+      ...quantities(x),
+    }
+  }
   return {
     ...character,
     attributes: {
@@ -201,27 +224,15 @@ export function normalize(character: Character): Character {
       ...x,
       total: skill + Math.max(1, x.rank),
     })),
-    inventory: character.inventory.slice(0, 18).map((x, i) => ({
-      ...x,
-      ...(x.armour === undefined ? {} : { armour: Math.max(0, x.armour) }),
-      position: i + 1,
-      slots: Math.max(1, x.slots || 1),
-      ...quantities(x),
-    })),
-    baselinePossessions: (character.baselinePossessions ?? []).map((x, i) => ({
-      ...x,
-      ...(x.armour === undefined ? {} : { armour: Math.max(0, x.armour) }),
-      position: i + 1,
-      slots: Math.max(1, x.slots || 1),
-      ...quantities(x),
-    })),
+    inventory: character.inventory.slice(0, 18).map(normalizeItem),
+    baselinePossessions: (character.baselinePossessions ?? []).map(normalizeItem),
   }
 }
 
-/** Damage reduction the player has written against their gear (SRD §9). */
+/** Damage reduction provided by gear (SRD §9). */
 export function armour(character: Character) {
   return [...character.inventory, ...(character.baselinePossessions ?? [])].reduce(
-    (sum, possession) => sum + Math.max(0, possession.armour ?? 0),
+    (sum, possession) => sum + Math.max(0, possession.armour ?? possession.armor ?? 0),
     0
   )
 }

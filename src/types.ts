@@ -7,8 +7,10 @@ export interface Item {
   name: string
   position: number
   slots: number
-  /** Damage reduction, filled in by the player. */
+  /** Damage reduction, filled in by player or provided by item data. */
   armour?: number
+  armor?: number
+  isWorn?: boolean
   quantity?: number
   description?: string
   properties?: string[]
@@ -56,6 +58,9 @@ export interface Background {
     description?: string
     properties?: string[]
     category?: string
+    armour?: number | { protection: number; type?: string }
+    armor?: number | { protection: number; type?: string }
+    slots?: number
   }>
   special?: string[]
   overrideBaselinePossessions?: boolean
