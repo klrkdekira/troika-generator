@@ -206,7 +206,7 @@ h3 {
   grid-template-columns: minmax(12rem, 1fr) auto auto auto auto;
   gap: 0.7rem;
   align-items: center;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #b0a69a;
   padding: 0.5rem 0;
 }
 .sheet-skill input,
@@ -311,7 +311,7 @@ footer,
   font-size: 0.78rem;
   color: #555;
 }
-@media (max-width: 760px) {
+@media screen and (max-width: 760px) {
   main {
     padding: 1rem;
   }
@@ -329,9 +329,13 @@ footer,
   }
   .skill-edit,
   .inventory-edit,
+  .sheet-skill-header,
+  .sheet-item-header,
   .sheet-skill,
-  .sheet-item {
-    grid-template-columns: 1fr auto auto;
+  .sheet-item,
+  .blank {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    gap: 0.4rem 0.5rem;
   }
   .skill-edit button,
   .inventory-edit button,
@@ -344,10 +348,16 @@ footer,
   }
 }
 @page {
-  size: A4;
-  margin: 12mm;
+  size: A4 portrait;
+  margin: 10mm;
 }
 @media print {
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   :root,
   html,
   body,
@@ -356,8 +366,13 @@ footer,
     background: #fff !important;
     background-color: #fff !important;
     box-shadow: none !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  }
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .no-print,
   header,
@@ -368,28 +383,31 @@ footer,
     display: inline !important;
   }
   main {
-    padding: 0;
-    margin: 0 auto;
-    width: 100%;
-    max-width: 100%;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   .sheet {
-    box-shadow: none;
-    border: 0;
-    padding: 0;
-    margin: 0;
-    width: 100%;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   .sheet-skill,
-  .sheet-item {
+  .sheet-item,
+  .damage-row,
+  .notes-line {
     break-inside: avoid;
-  }
-  .blank {
-    grid-template-columns: 7mm minmax(45mm, 1fr) 28mm 28mm;
-    min-height: 6mm;
+    page-break-inside: avoid;
   }
   .over-divider {
     margin-top: 3mm;
+    border-top: 1pt dashed #666 !important;
   }
 }
 .damage-matrix {
@@ -439,7 +457,7 @@ footer,
 .damage-blank b {
   min-height: 1em;
 }
-@media (max-width: 760px) {
+@media screen and (max-width: 760px) {
   .damage-header,
   .damage-row {
     grid-template-columns: minmax(5rem, 1fr) repeat(7, minmax(1.4rem, auto));
@@ -687,9 +705,11 @@ footer,
     padding-bottom: 2mm;
   }
   .sheet-skill,
-  .sheet-item {
+  .sheet-item,
+  .blank {
     min-height: 6.3mm;
     padding: 1mm 0;
+    border-bottom: 1pt solid #666 !important;
   }
   .sheet-skill:nth-child(even),
   .sheet-item:nth-child(even) {
@@ -706,6 +726,7 @@ footer,
   .write-box {
     min-width: 7mm;
     min-height: 5mm;
+    border: 1pt solid #111 !important;
   }
   .sheet-item .check input {
     width: 4mm;
@@ -722,9 +743,10 @@ footer,
     margin-bottom: 1mm;
   }
   .damage-row {
-    border-bottom: 0.5pt solid #888;
+    border-bottom: 1pt solid #666 !important;
     padding: 0.8mm 0;
     break-inside: avoid;
+    page-break-inside: avoid;
   }
   .damage-blank {
     min-height: 6mm;
@@ -742,7 +764,7 @@ footer,
     display: inline-block !important;
     width: 13mm;
     height: 8mm;
-    border: 1.2px solid #111;
+    border: 1pt solid #111 !important;
     vertical-align: middle;
     margin-right: 1.5mm;
   }
@@ -752,9 +774,10 @@ footer,
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    min-width: 70mm;
+    width: 100%;
+    min-width: 0;
     height: 8mm;
-    border: 1.2px solid #111;
+    border: 1pt solid #111 !important;
     padding: 0 2mm;
     margin: 0 !important;
     font-size: 12pt;
@@ -889,8 +912,8 @@ footer,
 @media print {
   .sheet-head {
     display: grid !important;
-    grid-template-columns: 1fr repeat(3, 28mm);
-    column-gap: 3mm;
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(22mm, 28mm)) !important;
+    column-gap: 2.5mm !important;
     align-items: start !important;
   }
   .sheet-head > p.header-stat {
@@ -927,7 +950,7 @@ footer,
   }
   .sheet-skill-header {
     display: grid !important;
-    grid-template-columns: minmax(44mm, 1fr) 18mm 22mm 32mm 14mm !important;
+    grid-template-columns: minmax(36mm, 1fr) 18mm 20mm 24mm 14mm !important;
     gap: 2mm !important;
     font-weight: bold;
     font-size: 8pt;
@@ -941,7 +964,7 @@ footer,
   }
   .sheet-item-header {
     display: grid !important;
-    grid-template-columns: minmax(52mm, 1fr) 16mm 27mm 18mm !important;
+    grid-template-columns: minmax(36mm, 1fr) 16mm 25mm 18mm !important;
     gap: 2mm !important;
     font-weight: bold;
     font-size: 8pt;
@@ -964,7 +987,8 @@ footer,
     justify-self: center !important;
   }
   .sheet-skill {
-    grid-template-columns: minmax(44mm, 1fr) 18mm 22mm 32mm 14mm !important;
+    display: grid !important;
+    grid-template-columns: minmax(36mm, 1fr) 18mm 20mm 24mm 14mm !important;
     gap: 2mm !important;
     align-items: center !important;
   }
@@ -974,7 +998,7 @@ footer,
     box-sizing: border-box;
     width: 5.5mm;
     height: 5.5mm;
-    border: 1.2px solid #111;
+    border: 1pt solid #111 !important;
     vertical-align: middle;
     margin-left: auto;
   }
@@ -986,8 +1010,15 @@ footer,
     display: inline !important;
     white-space: nowrap;
   }
+}
+.print-resource,
+.print-slots {
+  display: none;
+}
+@media print {
   .sheet-item {
-    grid-template-columns: minmax(52mm, 1fr) 16mm 27mm 18mm !important;
+    display: grid !important;
+    grid-template-columns: minmax(36mm, 1fr) 16mm 25mm 18mm !important;
     gap: 2mm !important;
     align-items: center !important;
   }
@@ -999,17 +1030,6 @@ footer,
   .sheet-item .check {
     min-width: 0;
   }
-}
-.print-resource,
-.print-slots {
-  display: none;
-}
-@media screen {
-  .sheet-item .no-print input[type='number'] {
-    width: 3.8rem;
-  }
-}
-@media print {
   .blank .blank-web {
     display: none !important;
   }
@@ -1034,24 +1054,25 @@ footer,
     height: 5.5mm !important;
     min-width: 7mm !important;
     min-height: 5.5mm !important;
-    border: 1.2px solid #111 !important;
+    border: 1pt solid #111 !important;
     background: transparent !important;
     vertical-align: middle !important;
     text-align: center !important;
     line-height: 5mm !important;
     margin: 0 0.6mm !important;
   }
-  .sheet-item-header,
-  .sheet-item,
   .blank {
-    grid-template-columns: minmax(52mm, 1fr) 16mm 27mm 18mm !important;
+    display: grid !important;
+    grid-template-columns: minmax(36mm, 1fr) 16mm 25mm 18mm !important;
     gap: 2mm !important;
     align-items: center !important;
   }
-  .sheet-item-header span:nth-child(2),
-  .sheet-item .armour-display {
-    text-align: center !important;
-    justify-self: center !important;
+  .damage-header,
+  .damage-row {
+    display: grid !important;
+    grid-template-columns: minmax(36mm, 1fr) repeat(7, minmax(9mm, 1fr)) !important;
+    gap: 1.5mm !important;
+    align-items: center !important;
   }
   .sheet-item-header span:nth-child(3),
   .sheet-item .item-qty {
