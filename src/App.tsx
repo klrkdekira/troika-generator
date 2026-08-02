@@ -646,59 +646,61 @@ function Sheet({
       )}
 
       <h3>Advanced skills</h3>
-      <div className="sheet-skill-header">
-        <span>Skill / Spell</span>
-        <span>Cost</span>
-        <span>Rank</span>
-        <span>Skill Total</span>
-        <span className="header-check">Used</span>
-      </div>
-      {pc.advancedSkills.map((x, i) => (
-        <div className="sheet-skill" key={i}>
-          <span>
-            {unpicked(x) !== '' ? (
-              <span className="pick-hint">{unpicked(x)}</span>
-            ) : (
-              <>
-                {x.name} <small>{x.type}</small>
-              </>
-            )}
-          </span>
-          <span className="skill-cost">
-            {x.type === 'spell' &&
-              (data.spells.get(x.name)?.cost ?? (
-                <>
-                  <span className="no-print empty-resource-box"></span>
-                  <span className="print-resource">
-                    <span className="print-resource-box"></span>
-                  </span>
-                </>
-              ))}
-          </span>
-          <span className="skill-stat">
-            <span className="web-current">{x.rank}</span>
-            <span className="print-resource">
-              <span className="print-resource-box"></span> / {x.rank}
-            </span>
-          </span>
-          <span className="skill-stat">
-            <span className="web-current">{pc.unrolled ? '—' : x.total}</span>
-            <span className="print-resource">
-              <span className="print-resource-box"></span>
-              {pc.unrolled ? '' : ` / ${x.total}`}
-            </span>
-          </span>
-          <label className="skill-check">
-            <input
-              className="no-print"
-              type="checkbox"
-              checked={Boolean(x.ticks)}
-              onChange={e => skill(i, { ticks: e.target.checked ? 1 : 0 })}
-            />
-            <span className="print-tickbox" aria-label="Skill used tickbox"></span>
-          </label>
+      <div className="skills-table-container">
+        <div className="sheet-skill-header">
+          <span>Skill / Spell</span>
+          <span>Cost</span>
+          <span>Rank</span>
+          <span>Skill Total</span>
+          <span className="header-check">Used</span>
         </div>
-      ))}
+        {pc.advancedSkills.map((x, i) => (
+          <div className="sheet-skill" key={i}>
+            <span>
+              {unpicked(x) !== '' ? (
+                <span className="pick-hint">{unpicked(x)}</span>
+              ) : (
+                <>
+                  {x.name} <small>{x.type}</small>
+                </>
+              )}
+            </span>
+            <span className="skill-cost">
+              {x.type === 'spell' &&
+                (data.spells.get(x.name)?.cost ?? (
+                  <>
+                    <span className="no-print empty-resource-box"></span>
+                    <span className="print-resource">
+                      <span className="print-resource-box"></span>
+                    </span>
+                  </>
+                ))}
+            </span>
+            <span className="skill-stat">
+              <span className="web-current">{x.rank}</span>
+              <span className="print-resource">
+                <span className="print-resource-box"></span> / {x.rank}
+              </span>
+            </span>
+            <span className="skill-stat">
+              <span className="web-current">{pc.unrolled ? '—' : x.total}</span>
+              <span className="print-resource">
+                <span className="print-resource-box"></span>
+                {pc.unrolled ? '' : ` / ${x.total}`}
+              </span>
+            </span>
+            <label className="skill-check">
+              <input
+                className="no-print"
+                type="checkbox"
+                checked={Boolean(x.ticks)}
+                onChange={e => skill(i, { ticks: e.target.checked ? 1 : 0 })}
+              />
+              <span className="print-tickbox" aria-label="Skill used tickbox"></span>
+            </label>
+          </div>
+        ))}
+      </div>
 
       <WeaponDamage pc={pc} data={data} />
 
@@ -725,14 +727,16 @@ function Sheet({
         />
       </div>
 
-      <div className="sheet-item-header">
-        <span>Item</span>
-        <span>Armour</span>
-        <span>Qty</span>
-        <span>Slots</span>
-        <span className="no-print"></span>
+      <div className="inventory-table-container">
+        <div className="sheet-item-header">
+          <span>Item</span>
+          <span>Armour</span>
+          <span>Qty</span>
+          <span>Slots</span>
+          <span className="no-print"></span>
+        </div>
+        <InventorySheet pc={pc} update={update} normalFree={free} overburdenedFree={over} />
       </div>
-      <InventorySheet pc={pc} update={update} normalFree={free} overburdenedFree={over} />
 
       {pc.specialAbilities?.length ? (
         <>
@@ -858,42 +862,89 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
   return (
     <>
       <h3>{spellRows.length ? 'Weapon & spell damage' : 'Weapon damage'}</h3>
-      <div className="damage-matrix">
-        <div className="damage-header">
-          <span>{spellRows.length && !rows.length ? 'Spell' : 'Weapon'}</span>
-          {rolls.map(roll => (
-            <span key={roll}>{roll}</span>
-          ))}
-        </div>
-        {rows.map(row => (
-          <div className="damage-row" key={row.weapon + (row.alias ?? '')}>
-            <b>
-              {row.weapon}
-              {row.alias && row.alias.toLowerCase() !== row.weapon.toLowerCase() && (
-                <small> ({row.alias})</small>
-              )}
-            </b>
-            {cell(row)}
-          </div>
-        ))}
-        {spellRows.map(row => (
-          <div className="damage-row spell-damage" key={row.weapon}>
-            <b>
-              {row.weapon} <small>spell</small>
-            </b>
-            {cell(row)}
-          </div>
-        ))}
-        {Array.from({ length: blankRows }, (_, i) => (
-          <div className="damage-row damage-blank" key={`blank-${i}`}>
-            <b></b>
+      <div className="damage-matrix-container">
+        <div className="damage-matrix">
+          <div className="damage-header">
+            <span>{spellRows.length && !rows.length ? 'Spell' : 'Weapon'}</span>
             {rolls.map(roll => (
-              <span key={roll}></span>
+              <span key={roll}>{roll}</span>
             ))}
           </div>
-        ))}
+          {rows.map(row => (
+            <div className="damage-row" key={row.weapon + (row.alias ?? '')}>
+              <b>
+                {row.weapon}
+                {row.alias && row.alias.toLowerCase() !== row.weapon.toLowerCase() && (
+                  <small> ({row.alias})</small>
+                )}
+              </b>
+              {cell(row)}
+            </div>
+          ))}
+          {spellRows.map(row => (
+            <div className="damage-row spell-damage" key={row.weapon}>
+              <b>
+                {row.weapon} <small>spell</small>
+              </b>
+              {cell(row)}
+            </div>
+          ))}
+          {Array.from({ length: blankRows }, (_, i) => (
+            <div className="damage-row damage-blank" key={`blank-${i}`}>
+              <b></b>
+              {rolls.map(roll => (
+                <span key={roll}></span>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </>
+  )
+}
+
+function EditableItemName({ item, onChange }: { item: Item; onChange: (name: string) => void }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [value, setValue] = useState(item.name)
+
+  useEffect(() => {
+    setValue(item.name)
+  }, [item.name])
+
+  if (isEditing) {
+    return (
+      <input
+        className="web-name-input no-print"
+        autoFocus
+        value={value}
+        aria-label={`Edit name for ${item.name}`}
+        onChange={e => setValue(e.target.value)}
+        onBlur={() => {
+          setIsEditing(false)
+          if (value.trim() !== '') onChange(value)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            setIsEditing(false)
+            if (value.trim() !== '') onChange(value)
+          } else if (e.key === 'Escape') {
+            setValue(item.name)
+            setIsEditing(false)
+          }
+        }}
+      />
+    )
+  }
+
+  return (
+    <span
+      className="web-item-display no-print"
+      title="Click to edit item name"
+      onClick={() => setIsEditing(true)}
+    >
+      <span className="item-name-text">{item.name}</span>
+      {item.description && <small className="item-description">{item.description}</small>}
+    </span>
   )
 }
 
@@ -934,19 +985,23 @@ function InventorySheet({
   const quantityCell = (possession: Item, set: (v: Partial<Item>) => void) => {
     const maximum = possession.maximumQuantity ?? possession.quantity
     const isPence = possession.name.toLowerCase().includes('pence')
-    const number = (value: number | undefined, key: 'quantity' | 'maximumQuantity') => (
+    const qtyInput = (
       <input
         type="number"
         min="0"
-        value={value ?? ''}
-        aria-label={`${key === 'quantity' ? 'Quantity' : 'Maximum quantity'} of ${possession.name}`}
-        onChange={e => set({ [key]: e.target.value === '' ? undefined : Number(e.target.value) })}
+        value={possession.quantity ?? ''}
+        aria-label={`Quantity of ${possession.name}`}
+        onChange={e =>
+          set({
+            quantity: e.target.value === '' ? undefined : Number(e.target.value),
+          })
+        }
       />
     )
     if (isPence) {
       return (
         <span className="item-qty">
-          <label className="no-print">{number(possession.quantity, 'quantity')}</label>
+          <label className="no-print">{qtyInput}</label>
           <span className="print-resource print-quantity">
             {possession.quantity !== undefined && possession.quantity !== 0 ? (
               possession.quantity
@@ -957,11 +1012,26 @@ function InventorySheet({
         </span>
       )
     }
+    const maxInput = (
+      <input
+        type="number"
+        min="0"
+        value={maximum ?? ''}
+        aria-label={`Maximum quantity of ${possession.name}`}
+        onChange={e =>
+          set({
+            maximumQuantity: e.target.value === '' ? undefined : Number(e.target.value),
+          })
+        }
+      />
+    )
     return (
       <span className="item-qty">
-        <label className="no-print">
-          {number(possession.quantity, 'quantity')} / {number(maximum, 'maximumQuantity')}
-        </label>
+        <span className="no-print qty-value-group">
+          <label className="qty-field">{qtyInput}</label>
+          <span className="qty-slash">/</span>
+          <label className="qty-field">{maxInput}</label>
+        </span>
         <span className="print-resource print-quantity">
           <span className="print-resource-box"></span> /{' '}
           {maximum ?? <span className="print-resource-box"></span>}
@@ -1036,12 +1106,7 @@ function InventorySheet({
               <span>{x.name}</span>
               {x.description && <small className="item-description">{x.description}</small>}
             </span>
-            <input
-              className="web-name no-print"
-              value={x.name}
-              aria-label={`Rename ${x.name}`}
-              onChange={e => change(i, { name: e.target.value })}
-            />
+            <EditableItemName item={x} onChange={name => change(i, { name })} />
           </span>
           {protection(x, v => change(i, v))}
           {quantityCell(x, v => change(i, v))}
@@ -1054,25 +1119,27 @@ function InventorySheet({
               aria-label={`Slots used by ${x.name}`}
               onChange={e => change(i, { slots: Math.max(0, Number(e.target.value)) })}
             />
-            <span className="slot-value">{x.slots}</span>
+            <span className="slot-value print-only">{x.slots}</span>
           </span>
           <span className="no-print inventory-actions">
-            <button
-              className="btn-icon"
-              disabled={i === 0}
-              aria-label={`Move ${x.name} up`}
-              onClick={() => move(i, i - 1)}
-            >
-              ↑
-            </button>
-            <button
-              className="btn-icon"
-              disabled={i === pc.inventory.length - 1}
-              aria-label={`Move ${x.name} down`}
-              onClick={() => move(i, i + 1)}
-            >
-              ↓
-            </button>
+            <div className="item-reorder-group" role="group" aria-label="Reorder item">
+              <button
+                className="btn-reorder btn-icon"
+                disabled={i === 0}
+                aria-label={`Move ${x.name} up`}
+                onClick={() => move(i, i - 1)}
+              >
+                ▲
+              </button>
+              <button
+                className="btn-reorder btn-icon"
+                disabled={i === pc.inventory.length - 1}
+                aria-label={`Move ${x.name} down`}
+                onClick={() => move(i, i + 1)}
+              >
+                ▼
+              </button>
+            </div>
             <label className="used-label-pill">
               <input
                 type="checkbox"
