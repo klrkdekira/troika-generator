@@ -473,6 +473,46 @@ footer,
   font-size: 1.05rem;
   letter-spacing: 0.02em;
 }
+.inventory-header-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 1.45rem 0 0.55rem;
+}
+.inventory-header-bar h3 {
+  margin: 0;
+}
+.encumbrance-tracker {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: #302a25;
+}
+.encumbrance-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: bold;
+}
+.encumbrance-box .web-current {
+  display: inline-block;
+  min-width: 1.4rem;
+  text-align: center;
+  background: #fbfaf7;
+  border: 1px solid #302a25;
+  border-radius: 2px;
+  padding: 0.05rem 0.25rem;
+  font-size: 0.9rem;
+}
+.encumbrance-max {
+  font-weight: 500;
+  color: #555;
+}
+.encumbrance-state {
+  color: #a33;
+  font-weight: 600;
+}
 /* The identity block and each stat share a top edge and the same label line
    height, so the name lands level with the SKILL/STAMINA/LUCK values without
    subgrid (which Chrome drops when printing). */
@@ -698,7 +738,8 @@ footer,
     font-size: 9.5pt;
     line-height: 1.3;
   }
-  .sheet h3 {
+  .sheet h3,
+  .inventory-header-bar {
     margin: 3mm 0 1.5mm;
   }
   .sheet-head {

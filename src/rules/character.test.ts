@@ -75,12 +75,25 @@ describe('Troika rules helpers', () => {
     const knightChar = makeCharacter(qKnight, data)
     expect(armour(knightChar)).toBe(4)
 
-    const lansquenet = data.backgrounds.find(b => b.name === 'Lansquenet')!
+    const lansquenet = data.backgrounds.find(b => b.id === 33 || b.name === 'Lansquenet')!
     expect(lansquenet).toBeDefined()
+    expect(lansquenet.id).toBe(33)
     const lansChar = makeCharacter(lansquenet, data)
-    const clothes = lansChar.inventory.find(i => i.name.includes('Clothing'))
+    const clothes = lansChar.inventory.find(i => i.name.includes('Brightly Coloured Clothing'))
+    expect(clothes).toBeDefined()
     expect(clothes?.slots).toBe(0)
     expect(clothes?.armour).toBe(2)
+
+    // Normalize must preserve slot 0
+    const normalizedLans = normalize(lansChar)
+    const normClothes = normalizedLans.inventory.find(i => i.name.includes('Brightly Coloured Clothing'))
+    expect(normClothes?.slots).toBe(0)
+
+    // Encumbrance slot 0 item must not consume an encumbrance slot
+    const burden = encumbrance(normalizedLans, data.manifest.rules.encumbrance)
+    expect(burden.slots).toBe(8)
+    const freeSlots = data.manifest.rules.encumbrance.maxSlots - burden.slots
+    expect(freeSlots).toBe(4)
   })
   it('parses and rolls item quantity expressions in background possessions', async () => {
     const data = await loadGameData()

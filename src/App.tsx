@@ -543,7 +543,22 @@ function Sheet({
         </div>
       ))}
       <WeaponDamage pc={pc} data={data} />
-      <h3>Inventory</h3>
+      <div className="inventory-header-bar">
+        <h3>Inventory</h3>
+        <div className="encumbrance-tracker">
+          <span className="encumbrance-label">Encumbrance</span>
+          <span className="encumbrance-box">
+            <span className="web-current">{burden.slots}</span>
+            <span className="print-resource">
+              <span className="print-resource-box" aria-label="Encumbrance slots"></span>
+            </span>
+          </span>
+          <span className="encumbrance-max"> / {maxSlots}</span>
+          {burden.state !== 'unencumbered' && (
+            <small className="encumbrance-state"> ({burden.state})</small>
+          )}
+        </div>
+      </div>
       <div className="sheet-item-header">
         <span>Item</span>
         <span>Armour</span>
