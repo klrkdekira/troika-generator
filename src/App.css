@@ -1207,7 +1207,7 @@ button:disabled {
   }
   .over-divider {
     margin-top: 3mm;
-    border-top: 1pt dashed #666 !important;
+    border-top: 1.5pt dashed #666 !important;
   }
 }
 
@@ -1366,12 +1366,23 @@ button:disabled {
   .sheet-head {
     padding-bottom: 2mm;
   }
+  .head-identity p {
+    /* Generous, explicit clearance (rather than the ~2.4pt margin inherited
+       from screen) so the bold, letter-spaced "TROIKA! CHARACTER SHEET" label
+       can never be visually overlapped by the name box directly below it,
+       regardless of font-metric/rendering differences between browsers. */
+    margin-bottom: 2mm !important;
+  }
   .sheet-skill,
   .sheet-item,
   .blank {
     min-height: 6.3mm;
     padding: 1mm 0;
-    border-bottom: 1pt solid #666 !important;
+    /* 1.5pt, not 1pt: Chromium's print rasterizer has a documented quirk
+       where border widths under ~1.5pt land in an ambiguous sub-pixel
+       snapping range and can paint inconsistently (this repo's own 1.5pt
+       header borders never exhibit the problem). */
+    border-bottom: 1.5pt solid #666 !important;
   }
   .sheet-skill:nth-child(even),
   .sheet-item:nth-child(even) {
@@ -1405,7 +1416,8 @@ button:disabled {
     margin-bottom: 1mm;
   }
   .damage-row {
-    border-bottom: 1pt solid #666 !important;
+    /* Same 1.5pt reasoning as .sheet-item/.sheet-skill above. */
+    border-bottom: 1.5pt solid #666 !important;
     padding: 0.8mm 0;
     break-inside: avoid;
     page-break-inside: avoid;
@@ -1437,7 +1449,7 @@ button:disabled {
     display: inline-block !important;
     width: 13mm;
     height: 8mm;
-    border: 1pt solid #111 !important;
+    border: 1.5pt solid #111 !important;
     vertical-align: middle;
     margin-right: 1.5mm;
   }
@@ -1448,7 +1460,7 @@ button:disabled {
     width: 100%;
     min-width: 0;
     height: 8.5mm;
-    border: 1pt solid #111 !important;
+    border: 1.5pt solid #111 !important;
     padding: 0 2.5mm;
     margin: 0 !important;
     font-size: 14pt !important;
@@ -1938,7 +1950,7 @@ button:disabled {
     box-sizing: border-box;
     width: 5.5mm;
     height: 5.5mm;
-    border: 1pt solid #111 !important;
+    border: 1.5pt solid #111 !important;
     vertical-align: middle;
     margin-left: auto;
   }
@@ -2003,7 +2015,11 @@ button:disabled {
     height: 5.5mm !important;
     min-width: 7mm !important;
     min-height: 5.5mm !important;
-    border: 1pt solid #111 !important;
+    /* 1.5pt: see the .sheet-item comment above re: Chromium's print rasterizer
+       and thin (~1pt) border widths. This box type is used dozens of times per
+       sheet (every stat/rank/tickbox), so it's the highest-value place to apply
+       the fix. */
+    border: 1.5pt solid #111 !important;
     background: transparent !important;
     vertical-align: middle !important;
     text-align: center !important;

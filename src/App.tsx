@@ -69,6 +69,21 @@ export default function App() {
     setStatus('')
   }
 
+  // Chrome (and most browsers) suggest document.title as the "Save as PDF"
+  // filename, so swap it to the background name for the duration of the print
+  // dialog, then put it back once the dialog closes.
+  const printSheet = () => {
+    if (!pc) return
+    const original = document.title
+    document.title = pc.background || original
+    const restore = () => {
+      document.title = original
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore)
+    window.print()
+  }
+
   const importFile = async (f?: File) => {
     if (!f || !data) return
     try {
@@ -241,7 +256,7 @@ export default function App() {
             <div className="export-actions">
               <div className="export-actions-left"></div>
               <div className="export-actions-center">
-                <button className="btn-primary" onClick={() => window.print()}>
+                <button className="btn-primary" onClick={printSheet}>
                   Print sheet / Save PDF
                 </button>
               </div>
@@ -1003,11 +1018,8 @@ function InventorySheet({
         <span className="item-qty">
           <label className="no-print">{qtyInput}</label>
           <span className="print-resource print-quantity">
-            {possession.quantity !== undefined && possession.quantity !== 0 ? (
-              possession.quantity
-            ) : (
-              <span className="print-resource-box"></span>
-            )}
+            <span className="print-resource-box"></span> /{' '}
+            {maximum ?? <span className="print-resource-box"></span>}
           </span>
         </span>
       )
