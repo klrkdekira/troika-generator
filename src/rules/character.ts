@@ -60,18 +60,25 @@ const parseArmor = (source: any): number | undefined => {
 
 const dice = /^\d*d\d+([+-]\d+)?$/i
 
-const item = (source: any, position: number, roll = true): Item => {
+const item = (source: any, position: number, roll = true, data?: GameData): Item => {
   let name = String(source.name || '')
   const declared = typeof source.quantity === 'string' ? source.quantity.trim() : source.quantity
   const declaredDice = typeof declared === 'string' && dice.test(declared)
   const diceInName = name.match(/^(\d*d\d+([+-]\d+)?) (.+)$/i)
-  const armorVal = parseArmor(source)
+  const countMatch = name.match(/^(\d+) (.+)$/)
+  const cleanName = diceInName ? diceInName[3] : countMatch ? countMatch[2] : name
+  const matchedItem = data?.items?.get(cleanName) || data?.items?.get(name)
+
+  const armorVal = parseArmor(source) ?? parseArmor(matchedItem ?? {})
+  const defaultSlots = matchedItem?.slots ?? 1
+  const damageAs = source.damageAs ?? matchedItem?.weapon?.damageAs
   const common = {
     position,
-    slots: Math.max(0, source.slots ?? 1),
+    slots: Math.max(0, source.slots ?? defaultSlots),
     ...(armorVal !== undefined ? { armour: armorVal, armor: armorVal } : {}),
-    description: source.description,
-    properties: source.properties,
+    ...(typeof damageAs === 'string' ? { damageAs } : {}),
+    description: source.description ?? matchedItem?.description,
+    properties: source.properties ?? matchedItem?.properties,
     readyForUse: false,
     condition: 'good' as const,
   }
@@ -85,7 +92,6 @@ const item = (source: any, position: number, roll = true): Item => {
 
   let quantity = parseQuantity(declared)
   if (quantity === undefined) {
-    const countMatch = name.match(/^(\d+) (.+)$/)
     if (diceInName) {
       quantity = rollExpression(diceInName[1])
       name = diceInName[3]
@@ -101,8 +107,8 @@ const item = (source: any, position: number, roll = true): Item => {
   return { ...common, name, quantity, maximumQuantity }
 }
 
-const baseline = (names: string[], roll = true) =>
-  names.map((raw, position) => item({ name: raw }, position + 1, roll))
+const baseline = (names: string[], roll = true, data?: GameData) =>
+  names.map((raw, position) => item({ name: raw }, position + 1, roll, data))
 
 /**
  * `roll: false` leaves every die for the player: attributes sit at their lowest
@@ -161,11 +167,11 @@ export function makeCharacter(
     ...(roll ? {} : { unrolled: true }),
     inventory: (background.possessions ?? [])
       .slice(0, 18)
-      .map((entry, position) => item(entry, position + 1, roll)),
+      .map((entry, position) => item(entry, position + 1, roll, data)),
     baselinePossessions:
       background.overrideBaselinePossessions || zoanthrop
         ? []
-        : baseline(rules.baselinePossessions, roll),
+        : baseline(rules.baselinePossessions, roll, data),
     initiativeTokens: data.manifest.rules.initiative.playerTokens,
     specialAbilities: background.special ?? [],
     languages: advancedSkills.filter(x => x.type === 'language').map(x => x.specialization!),

@@ -607,20 +607,46 @@ function Sheet({
 
 function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
   const tables = [...data.tables.values()]
-  const rowFor = (name: string) => {
-    const weapon = name.endsWith(' Fighting') ? name.slice(0, -9) : name
+  const rowFor = (name: string, damageAs?: string) => {
+    const weapon = damageAs ?? (name.endsWith(' Fighting') ? name.slice(0, -9) : name)
     for (const table of tables) {
       const matrix = table.damageMatrix?.matrix
       if (!matrix) continue
       const key = Object.keys(matrix).find(k => k.toLowerCase() === weapon.toLowerCase())
-      if (key) return { weapon: key, values: matrix[key] }
+      if (key) {
+        const displayName = name.endsWith(' Fighting') ? name.slice(0, -9) : name
+        return { weapon: key, alias: displayName, values: matrix[key] }
+      }
     }
     return undefined
   }
-  const rows = pc.advancedSkills
-    .filter(x => x.type === 'weapon')
-    .map(x => rowFor(x.name))
-    .filter(Boolean) as Array<{ weapon: string; values: Record<string, string> }>
+  const normaliseWeaponName = (name: string) => {
+    const lower = name.toLowerCase()
+    if (lower.endsWith('ves')) return lower.slice(0, -3) + 'f'
+    return lower.endsWith('s') ? lower.slice(0, -1) : lower
+  }
+  const damageAsFor = (name: string) => {
+    const weapon = name.endsWith(' Fighting') ? name.slice(0, -9) : name
+    return pc.inventory.find(item => normaliseWeaponName(item.name) === normaliseWeaponName(weapon))
+      ?.damageAs
+  }
+  const rowsByWeapon = new Map<
+    string,
+    { weapon: string; alias?: string; values: Record<string, string> }
+  >()
+  const addWeaponRow = (name: string, damageAs?: string) => {
+    const row = rowFor(name, damageAs)
+    if (row && !rowsByWeapon.has(row.weapon.toLowerCase())) {
+      rowsByWeapon.set(row.weapon.toLowerCase(), row)
+    }
+  }
+  for (const item of [...pc.inventory, ...pc.baselinePossessions]) {
+    if (item.damageAs) addWeaponRow(item.name, item.damageAs)
+  }
+  for (const skill of pc.advancedSkills.filter(x => x.type === 'weapon')) {
+    addWeaponRow(skill.name, damageAsFor(skill.name))
+  }
+  const rows = [...rowsByWeapon.values()]
   const spellRows = pc.advancedSkills
     .filter(x => x.type === 'spell')
     .map(x => ({ weapon: x.name, values: data.spells.get(x.name)?.damageTable }))
@@ -649,8 +675,13 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
           ))}
         </div>
         {rows.map(row => (
-          <div className="damage-row" key={row.weapon}>
-            <b>{row.weapon}</b>
+          <div className="damage-row" key={row.weapon + (row.alias ?? '')}>
+            <b>
+              {row.weapon}
+              {row.alias && row.alias.toLowerCase() !== row.weapon.toLowerCase() && (
+                <small> ({row.alias})</small>
+              )}
+            </b>
             {cell(row)}
           </div>
         ))}

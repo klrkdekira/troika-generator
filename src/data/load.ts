@@ -61,11 +61,12 @@ export async function loadGameData(
       value => (value.$ref ? json(refUrl(value.$ref)) : Promise.resolve(value)),
       progress
     )
-  const [backgrounds, skills, spells, tables, schema] = await Promise.all([
+  const [backgrounds, skills, spells, tables, items, schema] = await Promise.all([
     resolve(manifest.backgrounds),
     resolve(manifest.skills),
     resolve(manifest.spells),
     resolve(manifest.tables),
+    resolve(manifest.items),
     json(`${base}systems/character.schema.json`),
   ])
   const warnings: string[] = []
@@ -77,6 +78,7 @@ export async function loadGameData(
     skills: asMap(skills),
     spells: asMap(spells),
     tables: asMap(tables),
+    items: asMap(items),
     schema,
     warnings,
   }

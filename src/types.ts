@@ -13,6 +13,8 @@ export interface Item {
   isWorn?: boolean
   quantity?: number
   description?: string
+  // Name of the damage-table weapon this possession uses.
+  damageAs?: string
   properties?: string[]
   readyForUse?: boolean
   condition?: 'excellent' | 'good' | 'fair' | 'poor' | 'broken'
@@ -58,6 +60,7 @@ export interface Background {
     description?: string
     properties?: string[]
     category?: string
+    damageAs?: string
     armour?: number | { protection: number; type?: string }
     armor?: number | { protection: number; type?: string }
     slots?: number
@@ -72,6 +75,7 @@ export interface Manifest {
   skills?: Array<any>
   spells?: Array<any>
   tables?: Array<any>
+  items?: Array<any>
 }
 export interface GameData {
   manifest: Manifest
@@ -79,6 +83,7 @@ export interface GameData {
   skills: Map<string, any>
   spells: Map<string, any>
   tables: Map<string, any>
+  items: Map<string, any>
   schema: object
   warnings: string[]
 }

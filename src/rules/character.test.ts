@@ -109,6 +109,26 @@ describe('Troika rules helpers', () => {
     expect(cores?.quantity).toBeLessThanOrEqual(6)
     expect(cores?.maximumQuantity).toBe(cores?.quantity)
   })
+  it('preserves damageAs for innate weapon possessions', async () => {
+    const data = await loadGameData()
+    const rhinoLike = {
+      id: 46,
+      name: 'Rhino-Man',
+      possessions: [
+        { name: 'Horn', category: 'weapon', damageAs: 'Knife', slots: 0 },
+        { name: 'Claws', category: 'weapon', damageAs: 'Sword', slots: 0 },
+        { name: 'Hooves', category: 'weapon', damageAs: 'Club', slots: 0 },
+      ],
+      advancedSkills: [],
+      spells: [],
+    }
+    const character = makeCharacter(rhinoLike, data)
+    expect(character.inventory).toEqual([
+      expect.objectContaining({ name: 'Horn', damageAs: 'Knife', slots: 0 }),
+      expect.objectContaining({ name: 'Claws', damageAs: 'Sword', slots: 0 }),
+      expect.objectContaining({ name: 'Hooves', damageAs: 'Club', slots: 0 }),
+    ])
+  })
   it('leaves every die to the player when asked, and still validates', async () => {
     const data = await loadGameData()
     const apprentice = data.backgrounds.find(b => (b.spells ?? []).some(x => x.name === 'Random'))
@@ -185,13 +205,17 @@ describe('Troika rules helpers', () => {
     expect(result.attributes.luck).toMatchObject({ maximum: 7, current: 0 })
     expect(result.advancedSkills[0].total).toBe(9)
   })
-  it('assigns 1 slot by default to baseline possessions', async () => {
+  it('assigns 1 slot by default to baseline possessions except zero-slot items like Rucksack', async () => {
     const data = await loadGameData()
     const burglar = data.backgrounds.find(b => b.name === 'Burglar')!
     const character = makeCharacter(burglar, data)
     expect(character.baselinePossessions.length).toBeGreaterThan(0)
     for (const item of character.baselinePossessions) {
-      expect(item.slots).toBe(1)
+      if (item.name === 'Rucksack') {
+        expect(item.slots).toBe(0)
+      } else {
+        expect(item.slots).toBe(1)
+      }
     }
   })
 })
