@@ -71,7 +71,7 @@ const item = (source: any, position: number, roll = true, data?: GameData): Item
 
   const armorVal = parseArmor(source) ?? parseArmor(matchedItem ?? {})
   const defaultSlots = matchedItem?.slots ?? 1
-  const damageAs = source.damageAs ?? matchedItem?.weapon?.damageAs
+  const damageAs = source.damageAs ?? matchedItem?.damageAs ?? matchedItem?.weapon?.damageAs
   const common = {
     position,
     slots: Math.max(0, source.slots ?? defaultSlots),

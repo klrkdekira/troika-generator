@@ -129,6 +129,22 @@ describe('Troika rules helpers', () => {
       expect.objectContaining({ name: 'Hooves', damageAs: 'Club', slots: 0 }),
     ])
   })
+  it('reads top-level damageAs from catalog items', async () => {
+    const data = await loadGameData()
+    const items = new Map(data.items)
+    items.set('Catalog Staff', { name: 'Catalog Staff', slots: 1, damageAs: 'Staff' })
+    const character = makeCharacter(
+      {
+        id: 23,
+        name: 'Catalog test',
+        possessions: [{ name: 'Catalog Staff' }],
+        advancedSkills: [],
+        spells: [],
+      },
+      { ...data, items }
+    )
+    expect(character.inventory[0]).toMatchObject({ name: 'Catalog Staff', damageAs: 'Staff' })
+  })
   it('leaves every die to the player when asked, and still validates', async () => {
     const data = await loadGameData()
     const apprentice = data.backgrounds.find(b => (b.spells ?? []).some(x => x.name === 'Random'))

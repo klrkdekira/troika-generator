@@ -620,16 +620,6 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     }
     return undefined
   }
-  const normaliseWeaponName = (name: string) => {
-    const lower = name.toLowerCase()
-    if (lower.endsWith('ves')) return lower.slice(0, -3) + 'f'
-    return lower.endsWith('s') ? lower.slice(0, -1) : lower
-  }
-  const damageAsFor = (name: string) => {
-    const weapon = name.endsWith(' Fighting') ? name.slice(0, -9) : name
-    return pc.inventory.find(item => normaliseWeaponName(item.name) === normaliseWeaponName(weapon))
-      ?.damageAs
-  }
   const rowsByWeapon = new Map<
     string,
     { weapon: string; alias?: string; values: Record<string, string> }
@@ -644,7 +634,7 @@ function WeaponDamage({ pc, data }: { pc: Character; data: GameData }) {
     if (item.damageAs) addWeaponRow(item.name, item.damageAs)
   }
   for (const skill of pc.advancedSkills.filter(x => x.type === 'weapon')) {
-    addWeaponRow(skill.name, damageAsFor(skill.name))
+    addWeaponRow(skill.name)
   }
   const rows = [...rowsByWeapon.values()]
   const spellRows = pc.advancedSkills
